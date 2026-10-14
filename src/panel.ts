@@ -81,8 +81,10 @@ export class Panel {
   showHidden = false;
   sortKey: SortKey = "name";
   sortAsc = true;
-  /** 파일 더블클릭/Enter — 전송 시작 (M3에서 연결) */
-  onActivateFiles: (names: string[]) => void = () => {};
+  /** 파일/폴더 더블클릭/Enter — 반대편으로 전송 */
+  onActivateNames: (names: string[]) => void = () => {};
+  /** 다른 패널에서 이름들이 드롭됨 → 이 패널 경로로 전송 */
+  onDropNames: (names: string[]) => void = () => {};
   /** 목록 갱신 후 (상태 표시용) */
   onNavigated: (path: string) => void = () => {};
 
@@ -118,6 +120,25 @@ export class Panel {
     body.addEventListener("keydown", (e) => this.onKey(e));
     pathInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void this.navigate(pathInput.value);
+    });
+
+    // 패널 간 드롭 대상 (HTML5 DnD). 탐색기→앱 드롭은 main.ts가 Tauri 이벤트로 처리.
+    body.addEventListener("dragover", (e) => {
+      if (e.dataTransfer?.types.includes("application/x-idrop")) {
+        e.preventDefault();
+        body.classList.add("drop-target");
+      }
+    });
+    body.addEventListener("dragleave", () => body.classList.remove("drop-target"));
+    body.addEventListener("drop", (e) => {
+      body.classList.remove("drop-target");
+      const data = e.dataTransfer?.getData("application/x-idrop");
+      if (!data) return;
+      const msg = JSON.parse(data) as { kind: string; names: string[] };
+      if (msg.kind !== this.adapter.kind) {
+        e.preventDefault();
+        this.onDropNames(msg.names);
+      }
     });
   }
 
@@ -186,6 +207,21 @@ export class Panel {
     const row = document.createElement("div");
     row.className = "frow" + (e.isDir ? " dir" : "") + (this.adapter.kind === "remote" ? " remote" : "");
     if (idx >= 0 && this.selected.has(e.name)) row.classList.add("sel");
+    if (idx >= 0) {
+      row.draggable = true;
+      row.addEventListener("dragstart", (ev) => {
+        // 드래그 대상이 선택에 없으면 그 항목만 선택
+        if (!this.selected.has(e.name)) {
+          this.selected.clear();
+          this.selected.add(e.name);
+          this.render();
+        }
+        ev.dataTransfer?.setData(
+          "application/x-idrop",
+          JSON.stringify({ kind: this.adapter.kind, names: [...this.selected] })
+        );
+      });
+    }
     const icon = e.isDir ? (e.isLink ? "🔗" : "📁") : "📄";
     const name = document.createElement("div");
     name.className = "c-name";
@@ -226,7 +262,7 @@ export class Panel {
       } else if (e.isDir) {
         void this.navigate(this.adapter.join(this.path, e.name));
       } else {
-        this.onActivateFiles([e.name]);
+        this.onActivateNames([e.name]);
       }
     });
     return row;
@@ -245,7 +281,7 @@ export class Panel {
       if (sel.length === 1 && sel[0].isDir) {
         void this.navigate(this.adapter.join(this.path, sel[0].name));
       } else if (sel.length) {
-        this.onActivateFiles(sel.filter((s) => !s.isDir).map((s) => s.name));
+        this.onActivateNames(sel.map((s) => s.name));
       }
     } else if (e.key === "a" && e.ctrlKey) {
       e.preventDefault();

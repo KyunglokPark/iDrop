@@ -63,6 +63,9 @@ const STRINGS: Record<string, { ko: string; en: string }> = {
   "panel.transferLater": { ko: "전송 기능은 준비 중입니다", en: "Transfer is coming soon" },
   // ---- 전송 큐 ----
   "queue.title": { ko: "전송 큐", en: "Transfer queue" },
+  "queue.cancel": { ko: "선택 취소", en: "Cancel selected" },
+  "queue.retry": { ko: "재시도", en: "Retry" },
+  "queue.clear": { ko: "완료 항목 지우기", en: "Clear finished" },
   "queue.state.queued": { ko: "대기", en: "Queued" },
   "queue.state.active": { ko: "전송 중", en: "Active" },
   "queue.state.done": { ko: "완료", en: "Done" },

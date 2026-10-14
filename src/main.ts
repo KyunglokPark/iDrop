@@ -3,6 +3,7 @@ import "./styles.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { applyI18n, getLang, t } from "./i18n";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { confirmBox, initDialogs, promptText } from "./dialogs";
 import {
   FsAdapter,
@@ -11,6 +12,7 @@ import {
   localAdapterPaths,
   remoteAdapterPaths,
 } from "./panel";
+import { initQueue } from "./queue";
 
 applyI18n();
 void invoke("set_lang", { lang: getLang() }).catch(() => {});
@@ -76,8 +78,46 @@ const remotePanel = new Panel(
   document.getElementById("remote-list") as HTMLElement
 );
 
-localPanel.onActivateFiles = () => setStatus(t("panel.transferLater")); // M3
-remotePanel.onActivateFiles = () => setStatus(t("panel.transferLater")); // M3
+await initQueue(() => {
+  // 전송이 하나 완료될 때마다 대상 패널 새로고침 (과하지 않게 디바운스)
+  if (connected) void remotePanel.refresh().catch(() => {});
+  void localPanel.refresh().catch(() => {});
+});
+
+// 전송: 로컬에서 활성화/드롭 → 업로드, 원격에서 → 다운로드.
+function transfer(from: Panel, names: string[]) {
+  if (!names.length) return;
+  if (!connected) {
+    setStatus(t("status.disconnected"));
+    return;
+  }
+  const dir = from.adapter.kind === "local" ? "upload" : "download";
+  const sources = names.map((n) => from.adapter.join(from.path, n));
+  const destDir = dir === "upload" ? remotePanel.path : localPanel.path;
+  if (!destDir) return;
+  void invoke("queue_add", { dir, sources, destDir }).catch((e) => setStatus(String(e)));
+}
+
+// 더블클릭/Enter → 반대편으로 전송
+localPanel.onActivateNames = (names) => transfer(localPanel, names);
+remotePanel.onActivateNames = (names) => transfer(remotePanel, names);
+// 드롭(반대편 패널에 떨어뜨림) → 끌어온 쪽에서 전송
+localPanel.onDropNames = (names) => transfer(remotePanel, names); // 원격→로컬 다운로드
+remotePanel.onDropNames = (names) => transfer(localPanel, names); // 로컬→원격 업로드
+
+// 탐색기 → 원격 패널 드롭 (Tauri 파일 드롭). 좌표로 원격 패널 위인지 판정.
+void getCurrentWebview().onDragDropEvent((e) => {
+  if (e.payload.type !== "drop") return;
+  if (!connected || !remotePanel.path) return;
+  const rect = document.getElementById("panel-remote")!.getBoundingClientRect();
+  const { x, y } = e.payload.position;
+  if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+  void invoke("queue_add", {
+    dir: "upload",
+    sources: e.payload.paths,
+    destDir: remotePanel.path,
+  }).catch((err) => setStatus(String(err)));
+});
 
 // 어느 패널이 포커스인지 (F2/Delete/새 폴더 대상)
 let active: Panel = localPanel;

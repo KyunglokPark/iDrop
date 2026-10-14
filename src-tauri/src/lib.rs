@@ -8,7 +8,7 @@
 // localfs(로컬 패널), queue(전송 큐 엔진).
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -17,10 +17,12 @@ mod hostkey;
 mod import;
 mod localfs;
 mod pool;
+mod queue;
 mod sftp;
 mod win;
 
 use pool::SitePool;
+use queue::Queue;
 
 // ---- UI 언어 (한/EN) ---------------------------------------------------------
 static LANG_EN: AtomicBool = AtomicBool::new(false);
@@ -131,6 +133,12 @@ async fn import_xshell() -> Result<XshellImport, String> {
 #[derive(Default)]
 struct AppState {
     site: tokio::sync::Mutex<Option<Arc<SitePool>>>,
+    queue: Mutex<Option<Arc<Queue>>>,
+}
+
+fn get_queue(app: &AppHandle, state: &AppState) -> Arc<Queue> {
+    let mut q = state.queue.lock().unwrap();
+    q.get_or_insert_with(|| Queue::new(app.clone())).clone()
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -184,6 +192,8 @@ async fn site_connect(
     match r {
         Ok((site, home)) => {
             emit_site(&app, "connected", &hop.host, Some(home.clone()), None);
+            // 큐 스케줄러를 이 사이트에 붙인다 (전송 워커가 채널 풀을 쓴다)
+            get_queue(&app, &state).start_scheduler(site.clone());
             *state.site.lock().await = Some(site);
             Ok(home)
         }
@@ -246,6 +256,44 @@ async fn remote_remove(state: State<'_, AppState>, paths: Vec<String>) -> Result
         s.remove(&p).await?;
     }
     Ok(())
+}
+
+// ---- 전송 큐 명령 --------------------------------------------------------------
+
+/// 전송 요청: dir="upload"면 로컬 sources → 원격 destDir, "download"면 그 반대.
+#[tauri::command]
+async fn queue_add(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    dir: String,
+    sources: Vec<String>,
+    dest_dir: String,
+) -> Result<(), String> {
+    let site = site_get(&state).await?;
+    let q = get_queue(&app, &state);
+    let d = if dir == "download" { queue::Dir::Download } else { queue::Dir::Upload };
+    q.enqueue(site, d, sources, dest_dir);
+    Ok(())
+}
+
+#[tauri::command]
+fn queue_cancel(app: AppHandle, state: State<'_, AppState>, ids: Vec<u64>) {
+    get_queue(&app, &state).cancel(&ids);
+}
+
+#[tauri::command]
+fn queue_retry(app: AppHandle, state: State<'_, AppState>, ids: Vec<u64>) {
+    get_queue(&app, &state).retry(&ids);
+}
+
+#[tauri::command]
+fn queue_clear_done(app: AppHandle, state: State<'_, AppState>) {
+    get_queue(&app, &state).clear_done();
+}
+
+#[tauri::command]
+fn queue_set_concurrency(app: AppHandle, state: State<'_, AppState>, n: usize) {
+    get_queue(&app, &state).set_concurrency(n);
 }
 
 #[tauri::command]
@@ -387,6 +435,11 @@ pub fn run() {
             localfs::local_mkdir,
             localfs::local_rename,
             localfs::local_remove,
+            queue_add,
+            queue_cancel,
+            queue_retry,
+            queue_clear_done,
+            queue_set_concurrency,
             save_to_downloads,
             default_download_dir,
             secret_protect,
