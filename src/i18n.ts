@@ -52,6 +52,15 @@ const STRINGS: Record<string, { ko: string; en: string }> = {
   "panel.hidden": { ko: "숨김 파일 표시", en: "Show hidden files" },
   "panel.notConnected": { ko: "연결되어 있지 않습니다", en: "Not connected" },
 
+  "panel.newFolder": { ko: "새 폴더", en: "New folder" },
+  "panel.newFolderTitle": { ko: "새 폴더 이름", en: "New folder name" },
+  "panel.renameTitle": { ko: "이름 바꾸기 (F2)", en: "Rename (F2)" },
+  "panel.deleteTitle": { ko: "삭제", en: "Delete" },
+  "panel.deleteMsg": {
+    ko: "{n}개 항목을 영구 삭제할까요? (휴지통을 거치지 않습니다)",
+    en: "Permanently delete {n} item(s)? (does not use the Recycle Bin)",
+  },
+  "panel.transferLater": { ko: "전송 기능은 준비 중입니다", en: "Transfer is coming soon" },
   // ---- 전송 큐 ----
   "queue.title": { ko: "전송 큐", en: "Transfer queue" },
   "queue.state.queued": { ko: "대기", en: "Queued" },

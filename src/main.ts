@@ -1,9 +1,16 @@
-// iDrop — 앱 셸. 퀵커넥트 + 접속 상태. (패널/큐는 M2·M3에서 모듈로 교체)
+// iDrop — 앱 셸: 퀵커넥트 + 듀얼 패널 배선. (전송 큐는 M3)
 import "./styles.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { applyI18n, getLang, t } from "./i18n";
-import { initDialogs } from "./dialogs";
+import { confirmBox, initDialogs, promptText } from "./dialogs";
+import {
+  FsAdapter,
+  Panel,
+  PanelEntry,
+  localAdapterPaths,
+  remoteAdapterPaths,
+} from "./panel";
 
 applyI18n();
 void invoke("set_lang", { lang: getLang() }).catch(() => {});
@@ -15,55 +22,147 @@ const qcPort = document.getElementById("qc-port") as HTMLInputElement;
 const qcUser = document.getElementById("qc-user") as HTMLInputElement;
 const qcPass = document.getElementById("qc-pass") as HTMLInputElement;
 const qcBtn = document.getElementById("qc-connect") as HTMLButtonElement;
-const remotePath = document.getElementById("remote-path") as HTMLInputElement;
-const remoteList = document.getElementById("remote-list") as HTMLElement;
-const remoteRefresh = document.getElementById("remote-refresh") as HTMLButtonElement;
 
 export function setStatus(msg: string) {
   statusEl.textContent = msg;
 }
 
-export interface RemoteEntry {
-  name: string;
-  isDir: boolean;
-  isLink: boolean;
-  size: number;
-  mtime: number;
-  perm: number;
-}
-
 let connected = false;
 
-// ---- 임시 원격 목록 렌더링 (M2에서 panel.ts로 교체) --------------------------
+// ---- 어댑터 ------------------------------------------------------------------
 
-function fmtSize(n: number): string {
-  if (n < 1024) return String(n);
-  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
-  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + " MB";
-  return (n / 1024 / 1024 / 1024).toFixed(2) + " GB";
+interface LocalEntry {
+  name: string;
+  isDir: boolean;
+  size: number;
+  mtime: number;
+  hidden: boolean;
+  readonly: boolean;
 }
 
-async function listRemote(path: string) {
-  const [real, entries] = await invoke<[string, RemoteEntry[]]>("remote_list", { path });
-  remotePath.value = real;
-  remoteList.innerHTML = "";
-  const up = document.createElement("div");
-  up.className = "row dir";
-  up.textContent = "📁 ..";
-  up.ondblclick = () => void listRemote(real.replace(/\/[^/]+\/?$/, "") || "/");
-  remoteList.appendChild(up);
-  for (const en of entries) {
-    const row = document.createElement("div");
-    row.className = "row" + (en.isDir ? " dir" : "");
-    row.textContent = `${en.isDir ? "📁" : "📄"} ${en.name}${en.isDir ? "" : "  (" + fmtSize(en.size) + ")"}`;
-    if (en.isDir) {
-      row.ondblclick = () => void listRemote(real.replace(/\/$/, "") + "/" + en.name);
-    }
-    remoteList.appendChild(row);
+const localAdapter: FsAdapter = {
+  kind: "local",
+  async list(path) {
+    const [real, entries] = await invoke<[string, LocalEntry[]]>("local_list", { path });
+    return [real, entries as PanelEntry[]];
+  },
+  mkdir: (path) => invoke("local_mkdir", { path }),
+  rename: (from, to) => invoke("local_rename", { from, to }),
+  remove: (paths) => invoke("local_remove", { paths }),
+  ...localAdapterPaths,
+};
+
+const remoteAdapter: FsAdapter = {
+  kind: "remote",
+  async list(path) {
+    return await invoke<[string, PanelEntry[]]>("remote_list", { path });
+  },
+  mkdir: (path) => invoke("remote_mkdir", { path }),
+  rename: (from, to) => invoke("remote_rename", { from, to }),
+  remove: (paths) => invoke("remote_remove", { paths }),
+  ...remoteAdapterPaths,
+};
+
+// ---- 패널 구성 ----------------------------------------------------------------
+
+const localPanel = new Panel(
+  localAdapter,
+  document.getElementById("local-path") as HTMLInputElement,
+  document.getElementById("local-list") as HTMLElement
+);
+const remotePanel = new Panel(
+  remoteAdapter,
+  document.getElementById("remote-path") as HTMLInputElement,
+  document.getElementById("remote-list") as HTMLElement
+);
+
+localPanel.onActivateFiles = () => setStatus(t("panel.transferLater")); // M3
+remotePanel.onActivateFiles = () => setStatus(t("panel.transferLater")); // M3
+
+// 어느 패널이 포커스인지 (F2/Delete/새 폴더 대상)
+let active: Panel = localPanel;
+document.getElementById("panel-local")!.addEventListener("focusin", () => (active = localPanel));
+document.getElementById("panel-remote")!.addEventListener("focusin", () => (active = remotePanel));
+
+function guardRemote(p: Panel): boolean {
+  return p.adapter.kind !== "remote" || connected;
+}
+
+// 드라이브 선택
+const drivesSel = document.getElementById("local-drives") as HTMLSelectElement;
+async function loadDrives() {
+  const drives = await invoke<string[]>("local_drives");
+  drivesSel.innerHTML = "";
+  for (const d of drives) {
+    const o = document.createElement("option");
+    o.value = d;
+    o.textContent = d;
+    drivesSel.appendChild(o);
   }
 }
+drivesSel.addEventListener("change", () => void localPanel.navigate(drivesSel.value));
 
-// ---- 퀵커넥트 ---------------------------------------------------------------
+// 새로고침·숨김·새 폴더 버튼
+function wireHead(prefix: string, panel: Panel) {
+  const refresh = document.getElementById(`${prefix}-refresh`) as HTMLButtonElement;
+  const hidden = document.getElementById(`${prefix}-hidden`) as HTMLButtonElement;
+  const mkdir = document.getElementById(`${prefix}-mkdir`) as HTMLButtonElement;
+  refresh.addEventListener("click", () => {
+    if (guardRemote(panel)) void panel.refresh();
+  });
+  hidden.addEventListener("click", () => {
+    panel.setShowHidden(!panel.showHidden);
+    hidden.classList.toggle("active", panel.showHidden);
+  });
+  mkdir.addEventListener("click", async () => {
+    if (!guardRemote(panel) || !panel.path) return;
+    const name = await promptText(t("panel.newFolderTitle"));
+    if (!name?.trim()) return;
+    try {
+      await panel.adapter.mkdir(panel.adapter.join(panel.path, name.trim()));
+      await panel.refresh();
+    } catch (err) {
+      setStatus(String(err));
+    }
+  });
+}
+wireHead("local", localPanel);
+wireHead("remote", remotePanel);
+
+// F2 / Delete (포커스 패널 대상)
+document.addEventListener("keydown", async (e) => {
+  if (!guardRemote(active) || !active.path) return;
+  if (e.key === "F2") {
+    e.preventDefault();
+    const sel = active.selectedEntries();
+    if (sel.length !== 1) return;
+    const name = await promptText(t("panel.renameTitle"), sel[0].name);
+    if (!name?.trim() || name === sel[0].name) return;
+    try {
+      await active.adapter.rename(
+        active.adapter.join(active.path, sel[0].name),
+        active.adapter.join(active.path, name.trim())
+      );
+      await active.refresh();
+    } catch (err) {
+      setStatus(String(err));
+    }
+  } else if (e.key === "Delete") {
+    e.preventDefault();
+    const paths = active.selectedPaths();
+    if (!paths.length) return;
+    if (!(await confirmBox(t("panel.deleteTitle"), t("panel.deleteMsg", { n: paths.length }), true)))
+      return;
+    try {
+      await active.adapter.remove(paths);
+      await active.refresh();
+    } catch (err) {
+      setStatus(String(err));
+    }
+  }
+});
+
+// ---- 퀵커넥트 ----------------------------------------------------------------
 
 async function quickConnect() {
   if (connected) {
@@ -88,7 +187,7 @@ async function quickConnect() {
       },
       encoding: "auto",
     });
-    await listRemote(home);
+    await remotePanel.navigate(home);
   } catch (err) {
     setStatus(String(err));
   } finally {
@@ -102,14 +201,8 @@ for (const el of [qcHost, qcPort, qcUser, qcPass]) {
     if (e.key === "Enter") void quickConnect();
   });
 }
-remoteRefresh.addEventListener("click", () => {
-  if (connected) void listRemote(remotePath.value);
-});
-remotePath.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && connected) void listRemote(remotePath.value);
-});
 
-// ---- 접속 상태 ---------------------------------------------------------------
+// ---- 접속 상태 ----------------------------------------------------------------
 
 await listen<{ state: string; host: string; home?: string; error?: string }>(
   "site-state",
@@ -125,8 +218,16 @@ await listen<{ state: string; host: string; home?: string; error?: string }>(
       connected = false;
       qcBtn.textContent = t("top.connect");
       setStatus(p.error ? p.error : t("status.disconnected"));
-      remoteList.innerHTML = `<div class="placeholder">${t("panel.notConnected")}</div>`;
-      remotePath.value = "";
     }
   }
 );
+
+// ---- 시작 ---------------------------------------------------------------------
+
+await loadDrives();
+const home = await invoke<string>("local_home").catch(() => "");
+if (home) {
+  await localPanel.navigate(home).catch(() => {});
+  const drive = home.slice(0, 3);
+  for (const o of drivesSel.options) if (o.value.toUpperCase() === drive.toUpperCase()) o.selected = true;
+}

@@ -1,0 +1,257 @@
+// 파일 패널 — 로컬/원격 공용. FsAdapter가 경로 규칙과 백엔드 호출 차이를 흡수한다.
+// 키: Enter/더블클릭(폴더 진입·파일 활성), Backspace(상위), F2(이름변경),
+//     Delete(삭제), F5(새로고침), Ctrl/Shift 클릭(다중 선택)
+
+import { t } from "./i18n";
+
+export interface PanelEntry {
+  name: string;
+  isDir: boolean;
+  isLink?: boolean;
+  size: number;
+  mtime: number; // epoch 초
+  perm?: number;
+  hidden?: boolean;
+}
+
+export interface FsAdapter {
+  kind: "local" | "remote";
+  list(path: string): Promise<[string, PanelEntry[]]>;
+  mkdir(path: string): Promise<void>;
+  rename(from: string, to: string): Promise<void>;
+  remove(paths: string[]): Promise<void>;
+  join(dir: string, name: string): string;
+  parent(path: string): string;
+}
+
+export const localAdapterPaths = {
+  join(dir: string, name: string): string {
+    return dir.endsWith("\\") || dir.endsWith("/") ? dir + name : dir + "\\" + name;
+  },
+  parent(path: string): string {
+    const p = path.replace(/[\\/]+$/, "");
+    const i = Math.max(p.lastIndexOf("\\"), p.lastIndexOf("/"));
+    if (i <= 2) return p.slice(0, 3); // "C:\" 루트
+    return p.slice(0, i);
+  },
+};
+
+export const remoteAdapterPaths = {
+  join(dir: string, name: string): string {
+    return dir.endsWith("/") ? dir + name : dir + "/" + name;
+  },
+  parent(path: string): string {
+    const p = path.replace(/\/+$/, "");
+    const i = p.lastIndexOf("/");
+    return i <= 0 ? "/" : p.slice(0, i);
+  },
+};
+
+type SortKey = "name" | "size" | "mtime";
+
+function fmtSize(n: number, isDir: boolean): string {
+  if (isDir) return "";
+  if (n < 1024) return String(n);
+  if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+  if (n < 1073741824) return (n / 1048576).toFixed(1) + " MB";
+  return (n / 1073741824).toFixed(2) + " GB";
+}
+
+function fmtTime(sec: number): string {
+  if (!sec) return "";
+  const d = new Date(sec * 1000);
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function fmtPerm(perm: number | undefined): string {
+  if (perm === undefined) return "";
+  const bits = "rwxrwxrwx";
+  let s = "";
+  for (let i = 0; i < 9; i++) s += perm & (1 << (8 - i)) ? bits[i] : "-";
+  return s;
+}
+
+export class Panel {
+  path = "";
+  entries: PanelEntry[] = [];
+  shown: PanelEntry[] = [];
+  selected = new Set<string>();
+  anchor = -1;
+  showHidden = false;
+  sortKey: SortKey = "name";
+  sortAsc = true;
+  /** 파일 더블클릭/Enter — 전송 시작 (M3에서 연결) */
+  onActivateFiles: (names: string[]) => void = () => {};
+  /** 목록 갱신 후 (상태 표시용) */
+  onNavigated: (path: string) => void = () => {};
+
+  constructor(
+    public adapter: FsAdapter,
+    private pathInput: HTMLInputElement,
+    private body: HTMLElement
+  ) {
+    body.classList.add("filepanel");
+    body.innerHTML = "";
+    this.header = document.createElement("div");
+    this.header.className = "cols" + (adapter.kind === "remote" ? " remote" : "");
+    const cols: [SortKey | null, string][] = [
+      ["name", t("panel.name")],
+      ["size", t("panel.size")],
+      ["mtime", t("panel.mtime")],
+    ];
+    if (adapter.kind === "remote") cols.push([null, t("panel.perm")]);
+    for (const [key, label] of cols) {
+      const c = document.createElement("div");
+      c.textContent = label;
+      if (key) {
+        c.classList.add("sortable");
+        c.addEventListener("click", () => this.setSort(key));
+      }
+      this.header.appendChild(c);
+    }
+    this.rows = document.createElement("div");
+    this.rows.className = "rows";
+    body.append(this.header, this.rows);
+
+    body.tabIndex = 0;
+    body.addEventListener("keydown", (e) => this.onKey(e));
+    pathInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") void this.navigate(pathInput.value);
+    });
+  }
+
+  private header: HTMLElement;
+  private rows: HTMLElement;
+
+  async navigate(path: string): Promise<void> {
+    const [real, entries] = await this.adapter.list(path);
+    this.path = real;
+    this.entries = entries;
+    this.selected.clear();
+    this.anchor = -1;
+    this.pathInput.value = real;
+    this.render();
+    this.onNavigated(real);
+  }
+
+  async refresh(): Promise<void> {
+    if (this.path) await this.navigate(this.path);
+  }
+
+  setSort(key: SortKey) {
+    if (this.sortKey === key) this.sortAsc = !this.sortAsc;
+    else {
+      this.sortKey = key;
+      this.sortAsc = true;
+    }
+    this.render();
+  }
+
+  setShowHidden(v: boolean) {
+    this.showHidden = v;
+    this.render();
+  }
+
+  selectedPaths(): string[] {
+    return [...this.selected].map((n) => this.adapter.join(this.path, n));
+  }
+
+  selectedEntries(): PanelEntry[] {
+    return this.shown.filter((e) => this.selected.has(e.name));
+  }
+
+  render() {
+    const key = this.sortKey;
+    const dirFirst = (a: PanelEntry, b: PanelEntry) => Number(b.isDir) - Number(a.isDir);
+    const cmp = (a: PanelEntry, b: PanelEntry): number => {
+      let r = 0;
+      if (key === "name") r = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      else if (key === "size") r = a.size - b.size;
+      else r = a.mtime - b.mtime;
+      return this.sortAsc ? r : -r;
+    };
+    this.shown = this.entries
+      .filter((e) => this.showHidden || !(e.hidden || e.name.startsWith(".")))
+      .sort((a, b) => dirFirst(a, b) || cmp(a, b));
+
+    this.rows.innerHTML = "";
+    // ".." 상위 폴더
+    const up = this.makeRow({ name: "..", isDir: true, size: 0, mtime: 0 }, -1);
+    this.rows.appendChild(up);
+    this.shown.forEach((e, i) => this.rows.appendChild(this.makeRow(e, i)));
+  }
+
+  private makeRow(e: PanelEntry, idx: number): HTMLElement {
+    const row = document.createElement("div");
+    row.className = "frow" + (e.isDir ? " dir" : "") + (this.adapter.kind === "remote" ? " remote" : "");
+    if (idx >= 0 && this.selected.has(e.name)) row.classList.add("sel");
+    const icon = e.isDir ? (e.isLink ? "🔗" : "📁") : "📄";
+    const name = document.createElement("div");
+    name.className = "c-name";
+    name.textContent = `${icon} ${e.name}`;
+    name.title = e.name;
+    const size = document.createElement("div");
+    size.textContent = fmtSize(e.size, e.isDir);
+    const time = document.createElement("div");
+    time.textContent = fmtTime(e.mtime);
+    row.append(name, size, time);
+    if (this.adapter.kind === "remote") {
+      const perm = document.createElement("div");
+      perm.textContent = fmtPerm(e.perm);
+      row.appendChild(perm);
+    }
+
+    row.addEventListener("click", (ev) => {
+      if (idx < 0) return;
+      if (ev.shiftKey && this.anchor >= 0) {
+        const [a, b] = [Math.min(this.anchor, idx), Math.max(this.anchor, idx)];
+        if (!ev.ctrlKey) this.selected.clear();
+        for (let i = a; i <= b; i++) this.selected.add(this.shown[i].name);
+      } else if (ev.ctrlKey) {
+        if (this.selected.has(e.name)) this.selected.delete(e.name);
+        else this.selected.add(e.name);
+        this.anchor = idx;
+      } else {
+        this.selected.clear();
+        this.selected.add(e.name);
+        this.anchor = idx;
+      }
+      this.render();
+      this.body.focus();
+    });
+    row.addEventListener("dblclick", () => {
+      if (idx < 0) {
+        void this.navigate(this.adapter.parent(this.path));
+      } else if (e.isDir) {
+        void this.navigate(this.adapter.join(this.path, e.name));
+      } else {
+        this.onActivateFiles([e.name]);
+      }
+    });
+    return row;
+  }
+
+  private onKey(e: KeyboardEvent) {
+    if (e.key === "F5") {
+      e.preventDefault();
+      void this.refresh();
+    } else if (e.key === "Backspace") {
+      e.preventDefault();
+      void this.navigate(this.adapter.parent(this.path));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const sel = this.selectedEntries();
+      if (sel.length === 1 && sel[0].isDir) {
+        void this.navigate(this.adapter.join(this.path, sel[0].name));
+      } else if (sel.length) {
+        this.onActivateFiles(sel.filter((s) => !s.isDir).map((s) => s.name));
+      }
+    } else if (e.key === "a" && e.ctrlKey) {
+      e.preventDefault();
+      this.shown.forEach((s) => this.selected.add(s.name));
+      this.render();
+    }
+    // F2/Delete는 main.ts에서 대화상자와 함께 처리
+  }
+}

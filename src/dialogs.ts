@@ -117,3 +117,68 @@ export async function initDialogs() {
     input.focus();
   });
 }
+
+/** 확인 대화상자 — 확인=true */
+export function confirmBox(title: string, msg: string, danger = false): Promise<boolean> {
+  return new Promise((resolve) => {
+    const ov = overlay();
+    const b = box(ov, title);
+    const body = document.createElement("div");
+    body.className = "modal-body";
+    const pEl = document.createElement("p");
+    if (danger) pEl.className = "warn";
+    pEl.textContent = msg;
+    body.appendChild(pEl);
+    b.appendChild(body);
+    const row = document.createElement("div");
+    row.className = "modal-btns";
+    const ok = btn(t("dlg.ok"), "primary");
+    const no = btn(t("dlg.cancel"));
+    row.append(ok, no);
+    b.appendChild(row);
+    const done = (v: boolean) => {
+      ov.remove();
+      resolve(v);
+    };
+    ok.onclick = () => done(true);
+    no.onclick = () => done(false);
+    ov.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") done(false);
+    });
+    ok.focus();
+  });
+}
+
+/** 한 줄 입력 대화상자 — 취소=null */
+export function promptText(title: string, initial = ""): Promise<string | null> {
+  return new Promise((resolve) => {
+    const ov = overlay();
+    const b = box(ov, title);
+    const body = document.createElement("div");
+    body.className = "modal-body";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.spellcheck = false;
+    input.value = initial;
+    body.appendChild(input);
+    b.appendChild(body);
+    const row = document.createElement("div");
+    row.className = "modal-btns";
+    const ok = btn(t("dlg.ok"), "primary");
+    const no = btn(t("dlg.cancel"));
+    row.append(ok, no);
+    b.appendChild(row);
+    const done = (v: string | null) => {
+      ov.remove();
+      resolve(v);
+    };
+    ok.onclick = () => done(input.value);
+    no.onclick = () => done(null);
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") done(input.value);
+      if (ev.key === "Escape") done(null);
+    });
+    input.focus();
+    input.select();
+  });
+}

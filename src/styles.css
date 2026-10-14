@@ -211,7 +211,7 @@ body {
   overflow: auto;
 }
 
-/* ---- 임시 목록 행 (M2에서 교체) ---- */
+/* ---- (제거됨: panel.ts가 대체) ---- */
 .row {
   padding: 3px 10px;
   white-space: nowrap;
@@ -305,4 +305,72 @@ body {
   background: var(--accent);
   color: #1e1e2e;
   font-weight: 600;
+}
+
+/* ---- 파일 패널 (panel.ts) ---- */
+.filepanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.filepanel .cols,
+.filepanel .frow {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 90px 130px;
+  gap: 8px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.filepanel .cols.remote,
+.filepanel .frow.remote {
+  grid-template-columns: minmax(120px, 1fr) 90px 130px 86px;
+}
+
+.filepanel .cols {
+  position: sticky;
+  top: 0;
+  background: var(--bar);
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid #00000040;
+  z-index: 1;
+}
+
+.filepanel .cols .sortable {
+  cursor: pointer;
+}
+
+.filepanel .cols .sortable:hover {
+  color: var(--fg);
+}
+
+.filepanel .rows {
+  flex: 1;
+}
+
+.frow {
+  cursor: default;
+}
+
+.frow > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.frow:hover {
+  background: var(--row-hover);
+}
+
+.frow.sel {
+  background: var(--row-sel);
+}
+
+.frow.dir .c-name {
+  color: var(--accent);
+}
+
+.panel-head .icon.active {
+  background: var(--accent);
+  color: #1e1e2e;
 }

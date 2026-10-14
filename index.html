@@ -26,6 +26,8 @@
             <span data-i18n="panel.local">로컬</span>
             <select id="local-drives"></select>
             <input id="local-path" type="text" spellcheck="false" />
+            <button class="icon" id="local-mkdir" type="button" data-i18n-title="panel.newFolder">📁+</button>
+            <button class="icon" id="local-hidden" type="button" data-i18n-title="panel.hidden">👁</button>
             <button class="icon" id="local-refresh" type="button" data-i18n-title="panel.refresh">⟳</button>
           </div>
           <div class="panel-body" id="local-list" tabindex="0"></div>
@@ -35,11 +37,11 @@
           <div class="panel-head">
             <span data-i18n="panel.remote">원격</span>
             <input id="remote-path" type="text" spellcheck="false" />
+            <button class="icon" id="remote-mkdir" type="button" data-i18n-title="panel.newFolder">📁+</button>
+            <button class="icon" id="remote-hidden" type="button" data-i18n-title="panel.hidden">👁</button>
             <button class="icon" id="remote-refresh" type="button" data-i18n-title="panel.refresh">⟳</button>
           </div>
-          <div class="panel-body" id="remote-list" tabindex="0">
-            <div class="placeholder" data-i18n="panel.notConnected">연결되어 있지 않습니다</div>
-          </div>
+          <div class="panel-body" id="remote-list" tabindex="0"></div>
         </section>
       </div>
 

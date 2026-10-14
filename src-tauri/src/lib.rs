@@ -15,6 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 mod connect;
 mod hostkey;
 mod import;
+mod localfs;
 mod pool;
 mod sftp;
 mod win;
@@ -380,6 +381,12 @@ pub fn run() {
             remote_mkdir,
             remote_rename,
             remote_remove,
+            localfs::local_drives,
+            localfs::local_home,
+            localfs::local_list,
+            localfs::local_mkdir,
+            localfs::local_rename,
+            localfs::local_remove,
             save_to_downloads,
             default_download_dir,
             secret_protect,
