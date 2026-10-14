@@ -13,6 +13,7 @@ import {
   remoteAdapterPaths,
 } from "./panel";
 import { initQueue } from "./queue";
+import { initSites, Site } from "./sites";
 
 applyI18n();
 void invoke("set_lang", { lang: getLang() }).catch(() => {});
@@ -202,7 +203,38 @@ document.addEventListener("keydown", async (e) => {
   }
 });
 
-// ---- 퀵커넥트 ----------------------------------------------------------------
+// ---- 접속 (퀵커넥트 / 사이트) -------------------------------------------------
+
+async function connect(hop: {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  keyFile: string;
+  useAgent: boolean;
+  encoding: "auto" | "utf-8" | "euc-kr";
+  initialRemoteDir?: string;
+}) {
+  qcBtn.disabled = true;
+  try {
+    const home = await invoke<string>("site_connect", {
+      hop: {
+        host: hop.host,
+        port: hop.port,
+        username: hop.username,
+        password: hop.password,
+        keyFile: hop.keyFile,
+        useAgent: hop.useAgent,
+      },
+      encoding: hop.encoding,
+    });
+    await remotePanel.navigate(hop.initialRemoteDir || home);
+  } catch (err) {
+    setStatus(String(err));
+  } finally {
+    qcBtn.disabled = false;
+  }
+}
 
 async function quickConnect() {
   if (connected) {
@@ -214,26 +246,29 @@ async function quickConnect() {
     qcHost.focus();
     return;
   }
-  qcBtn.disabled = true;
-  try {
-    const home = await invoke<string>("site_connect", {
-      hop: {
-        host,
-        port: parseInt(qcPort.value, 10) || 22,
-        username: qcUser.value.trim(),
-        password: qcPass.value,
-        keyFile: "",
-        useAgent: false,
-      },
-      encoding: "auto",
-    });
-    await remotePanel.navigate(home);
-  } catch (err) {
-    setStatus(String(err));
-  } finally {
-    qcBtn.disabled = false;
-  }
+  await connect({
+    host,
+    port: parseInt(qcPort.value, 10) || 22,
+    username: qcUser.value.trim(),
+    password: qcPass.value,
+    keyFile: "",
+    useAgent: false,
+    encoding: "auto",
+  });
 }
+
+await initSites((s: Site) => {
+  void connect({
+    host: s.host,
+    port: s.port,
+    username: s.username,
+    password: s.password,
+    keyFile: s.keyFile,
+    useAgent: s.useAgent,
+    encoding: s.nameEncoding,
+    initialRemoteDir: s.initialRemoteDir,
+  });
+});
 
 qcBtn.addEventListener("click", () => void quickConnect());
 for (const el of [qcHost, qcPort, qcUser, qcPass]) {

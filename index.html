@@ -59,6 +59,51 @@
         <div id="queue-body"></div>
       </section>
     </div>
+    <!-- 사이트 관리자 -->
+    <div id="sites-modal" class="hidden">
+      <div class="sites-box">
+        <div class="sites-head">
+          <h3 data-i18n="sites.title">사이트 관리자</h3>
+          <button id="sites-close" type="button" class="x">✕</button>
+        </div>
+        <div class="sites-main">
+          <div class="sites-left">
+            <div id="sites-list"></div>
+            <div class="sites-left-btns">
+              <button id="sf-new" type="button" data-i18n="sites.new">새 사이트</button>
+              <button id="sf-import" type="button" data-i18n="sites.import">가져오기</button>
+              <button id="sf-import-putty" type="button">PuTTY</button>
+            </div>
+          </div>
+          <div class="sites-form">
+            <label data-i18n="sites.name">이름</label>
+            <input id="sf-name" type="text" spellcheck="false" />
+            <label data-i18n="sites.group">그룹</label>
+            <input id="sf-group" type="text" spellcheck="false" />
+            <label data-i18n="top.host">호스트</label>
+            <input id="sf-host" type="text" spellcheck="false" />
+            <label data-i18n="top.port">포트</label>
+            <input id="sf-port" type="text" value="22" spellcheck="false" />
+            <label data-i18n="top.user">사용자</label>
+            <input id="sf-user" type="text" spellcheck="false" />
+            <label data-i18n="top.pass">비밀번호</label>
+            <input id="sf-pass" type="password" />
+            <label data-i18n="sites.enc">파일명 인코딩</label>
+            <select id="sf-enc">
+              <option value="auto">자동</option>
+              <option value="utf-8">UTF-8</option>
+              <option value="euc-kr">EUC-KR</option>
+            </select>
+            <div class="sites-form-btns">
+              <button id="sf-save" type="button" data-i18n="sites.save">저장</button>
+              <button id="sf-connect" type="button" class="primary" data-i18n="sites.connect">접속</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <input id="sf-import-file" type="file" multiple accept=".csv,.xsh,.xts" class="hidden" />
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
