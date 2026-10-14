@@ -1,0 +1,12 @@
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\pkcs5-f897d3aa0c6fdf1a.d: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\error.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes1.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\kdf.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\kdf\salt.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\encryption.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\../README.md
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libpkcs5-f897d3aa0c6fdf1a.rmeta: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\error.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes1.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\kdf.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\kdf\salt.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\encryption.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\../README.md
+
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\lib.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\error.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes1.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\kdf.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\kdf\salt.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\pbes2\encryption.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pkcs5-0.8.1\src\../README.md:

@@ -1,0 +1,11 @@
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\poly1305-63e877f0d40971fb.d: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\avx2.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\avx2\helpers.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\autodetect.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\soft.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\../README.md
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libpoly1305-63e877f0d40971fb.rmeta: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\avx2.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\avx2\helpers.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\autodetect.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\soft.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\../README.md
+
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\lib.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\avx2.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\avx2\helpers.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\autodetect.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\backend\soft.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\poly1305-0.9.1\src\../README.md:

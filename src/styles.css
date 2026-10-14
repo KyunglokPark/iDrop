@@ -1,0 +1,308 @@
+/* iDrop — iDOT와 같은 디자인 토큰(다크 테마) */
+:root {
+  --bg: #1e1e2e;
+  --bar: #181825;
+  --fg: #cdd6f4;
+  --muted: #6c7086;
+  --accent: #89b4fa;
+  --accent-hover: #b4befe;
+  --field: #313244;
+  --field-hi: #45475a;
+  --btn: #3c3e52;
+  --btn-hi: #51536a;
+  --ok: #a6e3a1;
+  --err: #f38ba8;
+  --row-hover: #2a2b3c;
+  --row-sel: #3b3d55;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Malgun Gothic", "Segoe UI", sans-serif;
+  font-size: 13px;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ---- 상단바 ---- */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--bar);
+  border-bottom: 1px solid #00000040;
+}
+
+#logo {
+  height: 22px;
+  margin-right: 4px;
+}
+
+#topbar input {
+  background: var(--field);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 5px 8px;
+  outline: none;
+}
+
+#topbar input:focus {
+  border-color: var(--accent);
+}
+
+#qc-host {
+  width: 180px;
+}
+#qc-port {
+  width: 52px;
+}
+#qc-user {
+  width: 110px;
+}
+#qc-pass {
+  width: 110px;
+}
+
+#topbar button {
+  background: var(--btn);
+  border: none;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#topbar button:hover {
+  background: var(--btn-hi);
+}
+
+#status {
+  margin-left: auto;
+  color: var(--muted);
+  padding-right: 4px;
+}
+
+/* ---- 듀얼 패널 ---- */
+#panels {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+#panel-divider {
+  width: 4px;
+  background: var(--bar);
+  cursor: col-resize;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--bar);
+}
+
+.panel-head > span {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.panel-head input {
+  flex: 1;
+  background: var(--field);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 4px 8px;
+  outline: none;
+  min-width: 0;
+}
+
+.panel-head input:focus {
+  border-color: var(--accent);
+}
+
+.panel-head select {
+  background: var(--field);
+  border: none;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 4px 6px;
+}
+
+.panel-head .icon {
+  background: var(--btn);
+  border: none;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.panel-head .icon:hover {
+  background: var(--btn-hi);
+}
+
+.panel-body {
+  flex: 1;
+  overflow: auto;
+  outline: none;
+}
+
+.placeholder {
+  color: var(--muted);
+  text-align: center;
+  padding-top: 40px;
+}
+
+/* ---- 전송 큐 ---- */
+#queue-divider {
+  height: 4px;
+  background: var(--bar);
+  cursor: row-resize;
+}
+
+#queue {
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  min-height: 60px;
+}
+
+#queue-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  background: var(--bar);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+#queue-summary {
+  font-weight: 400;
+}
+
+#queue-body {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ---- 임시 목록 행 (M2에서 교체) ---- */
+.row {
+  padding: 3px 10px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.row:hover {
+  background: var(--row-hover);
+}
+
+.row.dir {
+  color: var(--accent);
+}
+
+/* ---- 모달 ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: #00000080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-box {
+  background: var(--bg);
+  border: 1px solid var(--field-hi);
+  border-radius: 10px;
+  padding: 16px 20px;
+  min-width: 360px;
+  max-width: 520px;
+}
+
+.modal-box h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.modal-body p {
+  margin: 4px 0;
+}
+
+.modal-body .warn {
+  color: var(--err);
+  font-weight: 600;
+}
+
+.modal-body .mono {
+  font-family: Consolas, monospace;
+  color: var(--muted);
+  user-select: text;
+}
+
+.modal-body input {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--field);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 6px 8px;
+  outline: none;
+}
+
+.modal-body input:focus {
+  border-color: var(--accent);
+}
+
+.modal-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.modal-btns button {
+  background: var(--btn);
+  border: none;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.modal-btns button:hover {
+  background: var(--btn-hi);
+}
+
+.modal-btns button.primary {
+  background: var(--accent);
+  color: #1e1e2e;
+  font-weight: 600;
+}

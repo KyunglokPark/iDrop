@@ -1,0 +1,10 @@
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\module_lattice-bcf69a410da6c9e2.d: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\algebra.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\encoding.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\maybe_box.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\truncate.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\../README.md
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libmodule_lattice-bcf69a410da6c9e2.rmeta: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\algebra.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\encoding.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\maybe_box.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\truncate.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\../README.md
+
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\lib.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\algebra.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\encoding.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\maybe_box.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\truncate.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\module-lattice-0.2.3\src\../README.md:

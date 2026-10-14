@@ -1,0 +1,10 @@
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\toml_datetime-248fd3474b7134da.d: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\datetime.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\de.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\ser.rs
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libtoml_datetime-248fd3474b7134da.rlib: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\datetime.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\de.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\ser.rs
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libtoml_datetime-248fd3474b7134da.rmeta: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\datetime.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\de.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\ser.rs
+
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\lib.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\datetime.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\de.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\toml_datetime-1.1.2+spec-1.1.0\src\ser.rs:

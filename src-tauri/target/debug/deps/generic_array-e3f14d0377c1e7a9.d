@@ -1,0 +1,11 @@
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\generic_array-e3f14d0377c1e7a9.d: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\hex.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\impls.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\arr.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\functional.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\iter.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\sequence.rs
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libgeneric_array-e3f14d0377c1e7a9.rmeta: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\hex.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\impls.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\arr.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\functional.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\iter.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\sequence.rs
+
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\lib.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\hex.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\impls.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\arr.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\functional.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\iter.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\generic-array-0.14.9\src\sequence.rs:

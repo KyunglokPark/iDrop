@@ -1,0 +1,13 @@
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\argon2-46ba31f73f76f776.d: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\algorithm.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\blake2b_long.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\block.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\error.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\memory.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\params.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\version.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\../README.md
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libargon2-46ba31f73f76f776.rmeta: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\algorithm.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\blake2b_long.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\block.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\error.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\memory.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\params.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\version.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\../README.md
+
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\lib.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\algorithm.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\blake2b_long.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\block.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\error.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\memory.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\params.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\version.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\argon2-0.6.0\src\../README.md:

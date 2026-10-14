@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iDrop</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- 상단바: 사이트 관리 + 퀵커넥트 -->
+      <header id="topbar">
+        <img id="logo" src="/iDrop.png" alt="iDrop" />
+        <button id="sites-open" type="button" data-i18n="top.sites">사이트</button>
+        <input id="qc-host" type="text" data-i18n-placeholder="top.host" spellcheck="false" />
+        <input id="qc-port" type="text" value="22" data-i18n-placeholder="top.port" spellcheck="false" />
+        <input id="qc-user" type="text" data-i18n-placeholder="top.user" spellcheck="false" />
+        <input id="qc-pass" type="password" data-i18n-placeholder="top.pass" />
+        <button id="qc-connect" type="button" data-i18n="top.connect">빠른 연결</button>
+        <span id="status"></span>
+      </header>
+
+      <!-- 듀얼 패널 -->
+      <div id="panels">
+        <section class="panel" id="panel-local">
+          <div class="panel-head">
+            <span data-i18n="panel.local">로컬</span>
+            <select id="local-drives"></select>
+            <input id="local-path" type="text" spellcheck="false" />
+            <button class="icon" id="local-refresh" type="button" data-i18n-title="panel.refresh">⟳</button>
+          </div>
+          <div class="panel-body" id="local-list" tabindex="0"></div>
+        </section>
+        <div id="panel-divider"></div>
+        <section class="panel" id="panel-remote">
+          <div class="panel-head">
+            <span data-i18n="panel.remote">원격</span>
+            <input id="remote-path" type="text" spellcheck="false" />
+            <button class="icon" id="remote-refresh" type="button" data-i18n-title="panel.refresh">⟳</button>
+          </div>
+          <div class="panel-body" id="remote-list" tabindex="0">
+            <div class="placeholder" data-i18n="panel.notConnected">연결되어 있지 않습니다</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 전송 큐 -->
+      <div id="queue-divider"></div>
+      <section id="queue">
+        <div id="queue-head">
+          <span data-i18n="queue.title">전송 큐</span>
+          <span id="queue-summary"></span>
+        </div>
+        <div id="queue-body"></div>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

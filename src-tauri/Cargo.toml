@@ -1,0 +1,37 @@
+[package]
+name = "idrop"
+version = "0.1.0"
+description = "iDrop — SFTP file transfer for Korean legacy servers"
+authors = ["IDOIT Inc."]
+edition = "2021"
+
+[lib]
+name = "idrop_lib"
+crate-type = ["cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 네이티브 SSH/SFTP — iDOT와 동일 구성.
+# aws-lc-rs(기본)는 Windows 빌드에 cmake/NASM이 필요해 ring 백엔드를 쓴다.
+russh = { version = "0.63", default-features = false, features = ["ring", "flate2", "rsa"] }
+tokio = { version = "1", features = ["sync", "macros", "time", "net", "io-util", "fs"] }
+encoding_rs = "0.8"
+# 저장 비밀번호(DPAPI 암호문)를 문자열로 보관
+base64 = "0.22"
+
+# 리눅스에서 Windows 코드를 타입 검사할 때 쓰는 cfg (win.rs) — 경고 없이 허용
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(idot_check)', 'cfg(mobile)'] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

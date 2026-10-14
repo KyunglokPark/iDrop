@@ -1,0 +1,12 @@
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\scrypt-18739609d56c4b63.d: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\errors.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\params.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\romix.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\../README.md C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix\pivot.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix\sse2.rs
+
+D:\Source\IDOIT\iDrop\src-tauri\target\debug\deps\libscrypt-18739609d56c4b63.rmeta: C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\lib.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\errors.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\params.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\romix.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\../README.md C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix\pivot.rs C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix\sse2.rs
+
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\lib.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\errors.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\params.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\romix.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\../README.md:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix\pivot.rs:
+C:\Users\parkk\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\scrypt-0.12.0\src\block_mix\sse2.rs:
