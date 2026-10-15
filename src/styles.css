@@ -53,8 +53,7 @@ body {
   flex: 0 0 auto;
   user-select: none;
   -webkit-user-drag: none;
-  /* 어두운 상단 바에서 잘 보이도록 로고를 흰색으로 칠한다 (iDOT와 동일) */
-  filter: brightness(0) invert(1);
+  /* public/iDrop_CI.png는 흰색+투명으로 변환해둔 것 (원본은 파랑·불투명 배경) */
   margin-right: 12px;
 }
 
