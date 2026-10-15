@@ -81,6 +81,7 @@ export class Panel {
   showHidden = false;
   sortKey: SortKey = "name";
   sortAsc = true;
+  private lastUpClick = 0;
   /** 파일/폴더 더블클릭/Enter — 반대편으로 전송 */
   onActivateNames: (names: string[]) => void = () => {};
   /** 다른 패널에서 이름들이 드롭됨 → 이 패널 경로로 전송 */
@@ -208,13 +209,15 @@ export class Panel {
     row.className = "frow" + (e.isDir ? " dir" : "") + (this.adapter.kind === "remote" ? " remote" : "");
     if (idx >= 0 && this.selected.has(e.name)) row.classList.add("sel");
     if (idx >= 0) {
+      row.dataset.name = e.name;
       row.draggable = true;
       row.addEventListener("dragstart", (ev) => {
-        // 드래그 대상이 선택에 없으면 그 항목만 선택
+        // 드래그 대상이 선택에 없으면 그 항목만 선택.
+        // (render()는 금지 — 드래그 중 DOM이 교체되면 드래그가 끊긴다)
         if (!this.selected.has(e.name)) {
           this.selected.clear();
           this.selected.add(e.name);
-          this.render();
+          this.paintSelection();
         }
         ev.dataTransfer?.setData(
           "application/x-idrop",
@@ -239,7 +242,15 @@ export class Panel {
     }
 
     row.addEventListener("click", (ev) => {
-      if (idx < 0) return;
+      if (idx < 0) {
+        // ".."은 클릭 한 번으로 상위 폴더 이동. 더블클릭하면 click이 2번 오므로
+        // 짧은 간격의 재클릭은 무시한다 (2단계 점프 방지).
+        const now = Date.now();
+        if (now - this.lastUpClick < 400) return;
+        this.lastUpClick = now;
+        void this.navigate(this.adapter.parent(this.path)).catch(() => {});
+        return;
+      }
       if (ev.shiftKey && this.anchor >= 0) {
         const [a, b] = [Math.min(this.anchor, idx), Math.max(this.anchor, idx)];
         if (!ev.ctrlKey) this.selected.clear();
@@ -253,19 +264,28 @@ export class Panel {
         this.selected.add(e.name);
         this.anchor = idx;
       }
-      this.render();
+      // render()로 DOM을 갈아엎으면 브라우저가 더블클릭을 인식하지 못한다
+      // (두 번째 클릭이 "새 요소"에 떨어짐) → 선택 클래스만 바꾼다.
+      this.paintSelection();
       this.body.focus();
     });
     row.addEventListener("dblclick", () => {
-      if (idx < 0) {
-        void this.navigate(this.adapter.parent(this.path));
-      } else if (e.isDir) {
-        void this.navigate(this.adapter.join(this.path, e.name));
+      if (idx < 0) return; // ".."은 click 핸들러가 처리
+      if (e.isDir) {
+        void this.navigate(this.adapter.join(this.path, e.name)).catch(() => {});
       } else {
         this.onActivateNames([e.name]);
       }
     });
     return row;
+  }
+
+  /** 선택 표시만 갱신 (행 DOM 유지 — 더블클릭·드래그가 끊기지 않게) */
+  private paintSelection() {
+    for (const el of Array.from(this.rows.children) as HTMLElement[]) {
+      const name = el.dataset.name;
+      if (name !== undefined) el.classList.toggle("sel", this.selected.has(name));
+    }
   }
 
   private onKey(e: KeyboardEvent) {
@@ -286,7 +306,7 @@ export class Panel {
     } else if (e.key === "a" && e.ctrlKey) {
       e.preventDefault();
       this.shown.forEach((s) => this.selected.add(s.name));
-      this.render();
+      this.paintSelection();
     }
     // F2/Delete는 main.ts에서 대화상자와 함께 처리
   }
