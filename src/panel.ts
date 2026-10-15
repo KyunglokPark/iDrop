@@ -86,8 +86,11 @@ export class Panel {
   onActivateNames: (names: string[]) => void = () => {};
   /** 다른 패널에서 이름들이 드롭됨 → 이 패널 경로로 전송 */
   onDropNames: (names: string[]) => void = () => {};
+  /** 우클릭 메뉴 요청 (onRow: 항목 위에서 눌렀는지) */
+  onContext: (x: number, y: number, onRow: boolean) => void = () => {};
   /** 목록 갱신 후 (상태 표시용) */
   onNavigated: (path: string) => void = () => {};
+  private suppressClick = false; // 드래그 직후 발생하는 click 무시
 
   constructor(
     public adapter: FsAdapter,
@@ -123,24 +126,22 @@ export class Panel {
       if (e.key === "Enter") void this.navigate(pathInput.value);
     });
 
-    // 패널 간 드롭 대상 (HTML5 DnD). 탐색기→앱 드롭은 main.ts가 Tauri 이벤트로 처리.
-    body.addEventListener("dragover", (e) => {
-      if (e.dataTransfer?.types.includes("application/x-idrop")) {
-        e.preventDefault();
-        body.classList.add("drop-target");
-      }
+    // 빈 공간 우클릭 메뉴 (행 우클릭은 makeRow에서)
+    this.rows.addEventListener("contextmenu", (ev) => {
+      if ((ev.target as HTMLElement).closest(".frow")) return;
+      ev.preventDefault();
+      this.onContext(ev.clientX, ev.clientY, false);
     });
-    body.addEventListener("dragleave", () => body.classList.remove("drop-target"));
-    body.addEventListener("drop", (e) => {
-      body.classList.remove("drop-target");
-      const data = e.dataTransfer?.getData("application/x-idrop");
-      if (!data) return;
-      const msg = JSON.parse(data) as { kind: string; names: string[] };
-      if (msg.kind !== this.adapter.kind) {
-        e.preventDefault();
-        this.onDropNames(msg.names);
-      }
-    });
+
+    Panel.all.push(this);
+  }
+
+  /** 모든 패널 (포인터 드래그의 드롭 대상 판정용) */
+  static all: Panel[] = [];
+
+  /** 패널 본문 요소 (드롭 판정·하이라이트용) */
+  get el(): HTMLElement {
+    return this.body;
   }
 
   private header: HTMLElement;
@@ -210,19 +211,75 @@ export class Panel {
     if (idx >= 0 && this.selected.has(e.name)) row.classList.add("sel");
     if (idx >= 0) {
       row.dataset.name = e.name;
-      row.draggable = true;
-      row.addEventListener("dragstart", (ev) => {
-        // 드래그 대상이 선택에 없으면 그 항목만 선택.
-        // (render()는 금지 — 드래그 중 DOM이 교체되면 드래그가 끊긴다)
+      // 패널 간 드래그 — 포인터 기반 자체 구현.
+      // (Tauri의 dragDropEnabled(탐색기→앱 드롭)가 WebView2에서 HTML5 DnD를
+      //  가로채므로 HTML5 drag 이벤트는 쓸 수 없다 — iDOT 탭 드래그와 같은 방식)
+      row.addEventListener("pointerdown", (ev) => {
+        if (ev.button !== 0 || ev.ctrlKey || ev.shiftKey) return;
+        const startX = ev.clientX;
+        const startY = ev.clientY;
+        let dragging = false;
+        let ghost: HTMLElement | null = null;
+        const names = () => (this.selected.has(e.name) ? [...this.selected] : [e.name]);
+        const under = (mv: PointerEvent): Panel | null => {
+          for (const p of Panel.all) {
+            if (p === this) continue;
+            const r = p.el.getBoundingClientRect();
+            if (mv.clientX >= r.left && mv.clientX <= r.right && mv.clientY >= r.top && mv.clientY <= r.bottom) {
+              return p;
+            }
+          }
+          return null;
+        };
+        const onMove = (mv: PointerEvent) => {
+          if (!dragging) {
+            if (Math.abs(mv.clientX - startX) < 6 && Math.abs(mv.clientY - startY) < 6) return;
+            dragging = true;
+            if (!this.selected.has(e.name)) {
+              this.selected.clear();
+              this.selected.add(e.name);
+              this.anchor = idx;
+              this.paintSelection();
+            }
+            row.setPointerCapture(ev.pointerId);
+            ghost = document.createElement("div");
+            ghost.className = "drag-ghost";
+            const n = names().length;
+            ghost.textContent = n === 1 ? names()[0] : t("panel.dragN", { n });
+            document.body.appendChild(ghost);
+          }
+          ghost!.style.left = `${mv.clientX + 12}px`;
+          ghost!.style.top = `${mv.clientY + 14}px`;
+          const target = under(mv);
+          for (const p of Panel.all) {
+            if (p !== this) p.el.classList.toggle("drop-target", p === target);
+          }
+        };
+        const onUp = (mv: PointerEvent) => {
+          row.removeEventListener("pointermove", onMove);
+          row.removeEventListener("pointerup", onUp);
+          row.removeEventListener("pointercancel", onUp);
+          if (!dragging) return;
+          this.suppressClick = true; // 드래그 끝의 click으로 선택이 바뀌지 않게
+          ghost?.remove();
+          const target = under(mv);
+          for (const p of Panel.all) p.el.classList.remove("drop-target");
+          if (target) target.onDropNames(names());
+        };
+        row.addEventListener("pointermove", onMove);
+        row.addEventListener("pointerup", onUp);
+        row.addEventListener("pointercancel", onUp);
+      });
+      // 우클릭 — 선택 보정 후 메뉴 요청
+      row.addEventListener("contextmenu", (ev) => {
+        ev.preventDefault();
         if (!this.selected.has(e.name)) {
           this.selected.clear();
           this.selected.add(e.name);
+          this.anchor = idx;
           this.paintSelection();
         }
-        ev.dataTransfer?.setData(
-          "application/x-idrop",
-          JSON.stringify({ kind: this.adapter.kind, names: [...this.selected] })
-        );
+        this.onContext(ev.clientX, ev.clientY, true);
       });
     }
     const icon = e.isDir ? (e.isLink ? "🔗" : "📁") : "📄";
@@ -242,6 +299,10 @@ export class Panel {
     }
 
     row.addEventListener("click", (ev) => {
+      if (this.suppressClick) {
+        this.suppressClick = false;
+        return;
+      }
       if (idx < 0) {
         // ".."은 클릭 한 번으로 상위 폴더 이동. 더블클릭하면 click이 2번 오므로
         // 짧은 간격의 재클릭은 무시한다 (2단계 점프 방지).

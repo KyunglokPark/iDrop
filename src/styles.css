@@ -648,3 +648,42 @@ body {
   color: var(--muted);
   cursor: pointer;
 }
+
+/* ---- 포인터 드래그 고스트 ---- */
+.drag-ghost {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+  background: var(--accent);
+  color: #1e1e2e;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px #00000066;
+}
+
+/* ---- 우클릭 메뉴 ---- */
+.ctxmenu {
+  position: fixed;
+  z-index: 150;
+  background: var(--bg);
+  border: 1px solid var(--field-hi);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 150px;
+  box-shadow: 0 6px 20px #00000080;
+}
+
+.ctxmenu-item {
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.ctxmenu-item:hover {
+  background: var(--row-sel);
+}

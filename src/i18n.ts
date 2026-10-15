@@ -61,6 +61,13 @@ const STRINGS: Record<string, { ko: string; en: string }> = {
     en: "Permanently delete {n} item(s)? (does not use the Recycle Bin)",
   },
   "panel.transferLater": { ko: "전송 기능은 준비 중입니다", en: "Transfer is coming soon" },
+  "panel.dragN": { ko: "{n}개 항목", en: "{n} items" },
+  // ---- 우클릭 메뉴 ----
+  "menu.upload": { ko: "업로드", en: "Upload" },
+  "menu.download": { ko: "다운로드", en: "Download" },
+  "menu.rename": { ko: "이름 바꾸기", en: "Rename" },
+  "menu.delete": { ko: "삭제", en: "Delete" },
+  "menu.refresh": { ko: "새로 고침", en: "Refresh" },
   // ---- 전송 큐 ----
   "queue.title": { ko: "전송 큐", en: "Transfer queue" },
   "queue.cancel": { ko: "선택 취소", en: "Cancel selected" },

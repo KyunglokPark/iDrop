@@ -155,53 +155,123 @@ function wireHead(prefix: string, panel: Panel) {
     panel.setShowHidden(!panel.showHidden);
     hidden.classList.toggle("active", panel.showHidden);
   });
-  mkdir.addEventListener("click", async () => {
-    if (!guardRemote(panel) || !panel.path) return;
-    const name = await promptText(t("panel.newFolderTitle"));
-    if (!name?.trim()) return;
-    try {
-      await panel.adapter.mkdir(panel.adapter.join(panel.path, name.trim()));
-      await panel.refresh();
-    } catch (err) {
-      setStatus(String(err));
-    }
-  });
+  mkdir.addEventListener("click", () => void mkdirIn(panel));
 }
 wireHead("local", localPanel);
 wireHead("remote", remotePanel);
 
+async function mkdirIn(panel: Panel) {
+  if (!guardRemote(panel) || !panel.path) return;
+  const name = await promptText(t("panel.newFolderTitle"));
+  if (!name?.trim()) return;
+  try {
+    await panel.adapter.mkdir(panel.adapter.join(panel.path, name.trim()));
+    await panel.refresh();
+  } catch (err) {
+    setStatus(String(err));
+  }
+}
+
+async function renameIn(panel: Panel) {
+  if (!guardRemote(panel) || !panel.path) return;
+  const sel = panel.selectedEntries();
+  if (sel.length !== 1) return;
+  const name = await promptText(t("panel.renameTitle"), sel[0].name);
+  if (!name?.trim() || name === sel[0].name) return;
+  try {
+    await panel.adapter.rename(
+      panel.adapter.join(panel.path, sel[0].name),
+      panel.adapter.join(panel.path, name.trim())
+    );
+    await panel.refresh();
+  } catch (err) {
+    setStatus(String(err));
+  }
+}
+
+async function deleteIn(panel: Panel) {
+  if (!guardRemote(panel) || !panel.path) return;
+  const paths = panel.selectedPaths();
+  if (!paths.length) return;
+  if (!(await confirmBox(t("panel.deleteTitle"), t("panel.deleteMsg", { n: paths.length }), true)))
+    return;
+  try {
+    await panel.adapter.remove(paths);
+    await panel.refresh();
+  } catch (err) {
+    setStatus(String(err));
+  }
+}
+
 // F2 / Delete (포커스 패널 대상)
-document.addEventListener("keydown", async (e) => {
-  if (!guardRemote(active) || !active.path) return;
+document.addEventListener("keydown", (e) => {
   if (e.key === "F2") {
     e.preventDefault();
-    const sel = active.selectedEntries();
-    if (sel.length !== 1) return;
-    const name = await promptText(t("panel.renameTitle"), sel[0].name);
-    if (!name?.trim() || name === sel[0].name) return;
-    try {
-      await active.adapter.rename(
-        active.adapter.join(active.path, sel[0].name),
-        active.adapter.join(active.path, name.trim())
-      );
-      await active.refresh();
-    } catch (err) {
-      setStatus(String(err));
-    }
+    void renameIn(active);
   } else if (e.key === "Delete") {
     e.preventDefault();
-    const paths = active.selectedPaths();
-    if (!paths.length) return;
-    if (!(await confirmBox(t("panel.deleteTitle"), t("panel.deleteMsg", { n: paths.length }), true)))
-      return;
-    try {
-      await active.adapter.remove(paths);
-      await active.refresh();
-    } catch (err) {
-      setStatus(String(err));
-    }
+    void deleteIn(active);
   }
 });
+
+// ---- 우클릭 메뉴 --------------------------------------------------------------
+
+let ctxEl: HTMLElement | null = null;
+
+function closeMenu() {
+  ctxEl?.remove();
+  ctxEl = null;
+}
+
+document.addEventListener("click", closeMenu);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeMenu();
+});
+
+function showMenu(x: number, y: number, items: { label: string; action: () => void }[]) {
+  closeMenu();
+  const menu = document.createElement("div");
+  menu.className = "ctxmenu";
+  for (const it of items) {
+    const row = document.createElement("div");
+    row.className = "ctxmenu-item";
+    row.textContent = it.label;
+    row.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeMenu();
+      it.action();
+    });
+    menu.appendChild(row);
+  }
+  document.body.appendChild(menu);
+  // 화면 밖으로 나가지 않게
+  const r = menu.getBoundingClientRect();
+  menu.style.left = `${Math.min(x, window.innerWidth - r.width - 4)}px`;
+  menu.style.top = `${Math.min(y, window.innerHeight - r.height - 4)}px`;
+  ctxEl = menu;
+}
+
+function panelMenu(panel: Panel, x: number, y: number, onRow: boolean) {
+  const isLocal = panel.adapter.kind === "local";
+  const items: { label: string; action: () => void }[] = [];
+  if (onRow) {
+    items.push({
+      label: isLocal ? t("menu.upload") : t("menu.download"),
+      action: () => transfer(panel, [...panel.selected]),
+    });
+    items.push({ label: t("menu.rename"), action: () => void renameIn(panel) });
+    items.push({ label: t("menu.delete"), action: () => void deleteIn(panel) });
+  }
+  items.push({ label: t("panel.newFolder"), action: () => void mkdirIn(panel) });
+  items.push({ label: t("menu.refresh"), action: () => void panel.refresh() });
+  showMenu(x, y, items);
+}
+
+localPanel.onContext = (x, y, onRow) => panelMenu(localPanel, x, y, onRow);
+remotePanel.onContext = (x, y, onRow) => {
+  if (!connected) return;
+  panelMenu(remotePanel, x, y, onRow);
+};
 
 // ---- 접속 (퀵커넥트 / 사이트) -------------------------------------------------
 
