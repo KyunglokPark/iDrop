@@ -29,6 +29,16 @@ body {
   font-family: "Malgun Gothic", "Segoe UI", sans-serif;
   font-size: 13px;
   user-select: none;
+  /* 스크롤이 끝에 닿아도 창 전체가 당겨졌다 돌아오는 바운스를 막는다 */
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* 스크롤 영역: 끝에서 상위로 스크롤이 전파돼 창이 흔들리지 않게 */
+.panel-body,
+#queue-body,
+#sites-list {
+  overscroll-behavior: contain;
 }
 
 #app {
