@@ -12,10 +12,28 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Notify;
+use tokio::sync::{oneshot, Notify};
 
 use crate::pool::SitePool;
 use crate::sftp;
+
+/// 같은 이름이 이미 있을 때의 처리.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Conflict {
+    Ask,
+    Overwrite,
+    Skip,
+    Rename,
+}
+
+fn parse_conflict(s: &str) -> Conflict {
+    match s {
+        "overwrite" => Conflict::Overwrite,
+        "skip" => Conflict::Skip,
+        "rename" => Conflict::Rename,
+        _ => Conflict::Ask,
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -35,13 +53,11 @@ pub enum ItemState {
 }
 
 struct Item {
-    id: u64,
     dir: Dir,
     local: PathBuf,
     remote: String,
     /// 전송 대상이 디렉터리 생성이면 true (파일 바이트 없음)
     is_mkdir: bool,
-    size: u64,
     state: ItemState,
     cancel: Arc<AtomicBool>,
 }
@@ -67,6 +83,10 @@ pub struct Queue {
     done_bytes: AtomicU64,
     total_bytes: AtomicU64,
     wake: Notify,
+    /// 배치 단위 "모두 적용" 정책 (Ask면 항목마다 묻는다)
+    policy: Mutex<Conflict>,
+    /// 충돌 답 대기 (req_id → 보낸이)
+    conflict_waiters: Mutex<HashMap<u64, oneshot::Sender<Conflict>>>,
 }
 
 impl Queue {
@@ -82,6 +102,8 @@ impl Queue {
             done_bytes: AtomicU64::new(0),
             total_bytes: AtomicU64::new(0),
             wake: Notify::new(),
+            policy: Mutex::new(Conflict::Ask),
+            conflict_waiters: Mutex::new(HashMap::new()),
         });
         q.clone().spawn_progress_emitter();
         q
@@ -144,12 +166,10 @@ impl Queue {
         self.items.lock().unwrap().insert(
             id,
             Item {
-                id,
                 dir,
                 local,
                 remote,
                 is_mkdir,
-                size,
                 state: ItemState::Queued,
                 cancel: Arc::new(AtomicBool::new(false)),
             },
@@ -163,6 +183,7 @@ impl Queue {
     /// 전송 요청: sources(로컬 또는 원격 경로)를 dest_dir 아래로.
     /// 나열(재귀 펼치기)은 별도 태스크에서 비동기로 진행한다.
     pub fn enqueue(self: &Arc<Self>, site: Arc<SitePool>, dir: Dir, sources: Vec<String>, dest_dir: String) {
+        self.reset_policy(); // 새 배치는 다시 묻기부터
         let q = self.clone();
         tauri::async_runtime::spawn(async move {
             for src in sources {
@@ -309,6 +330,13 @@ impl Queue {
                 }
                 return Ok(());
             }
+
+            // 충돌 검사 — 대상이 이미 있으면 정책에 따른다 (대상 경로가 바뀔 수 있다)
+            let (local, remote) = self.resolve_conflict(&site, dir, id, local, remote).await?;
+            if remote.is_empty() {
+                return Ok(()); // 건너뛰기 (Skip)
+            }
+
             let s = site.take_xfer().await?;
             let mut acc = 0u64;
             let res = match dir {
@@ -350,6 +378,87 @@ impl Queue {
             it.state = state.clone();
         }
         self.emit_state(id, &state);
+    }
+
+    /// 충돌 해소. Skip이면 remote를 ""로, Rename이면 비충돌 경로로 바꿔 돌려준다.
+    async fn resolve_conflict(
+        &self,
+        site: &Arc<SitePool>,
+        dir: Dir,
+        id: u64,
+        local: PathBuf,
+        remote: String,
+    ) -> Result<(PathBuf, String), String> {
+        let exists = match dir {
+            Dir::Upload => site.browse().await?.stat(&remote, true).await.is_ok(),
+            Dir::Download => tokio::fs::try_exists(&local).await.unwrap_or(false),
+        };
+        if !exists {
+            return Ok((local, remote));
+        }
+        let policy = *self.policy.lock().unwrap();
+        let action = match policy {
+            Conflict::Ask => self.ask_conflict(id, dir, &local, &remote).await,
+            other => other,
+        };
+        match action {
+            Conflict::Skip => Ok((local, String::new())),
+            Conflict::Overwrite | Conflict::Ask => Ok((local, remote)),
+            Conflict::Rename => match dir {
+                Dir::Upload => {
+                    let s = site.browse().await?;
+                    let dir_path = sftp::base_dir(&remote);
+                    let mut n = 2;
+                    loop {
+                        let cand = format!("{dir_path}/{}", sftp::numbered(sftp::base(&remote), n));
+                        if s.stat(&cand, true).await.is_err() {
+                            return Ok((local, cand));
+                        }
+                        n += 1;
+                    }
+                }
+                Dir::Download => {
+                    let parent = local.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+                    let name = local.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+                    Ok((sftp::unique_local(&parent, &name), remote))
+                }
+            },
+        }
+    }
+
+    async fn ask_conflict(&self, id: u64, dir: Dir, local: &std::path::Path, remote: &str) -> Conflict {
+        let (tx, rx) = oneshot::channel();
+        self.conflict_waiters.lock().unwrap().insert(id, tx);
+        #[derive(serde::Serialize, Clone)]
+        #[serde(rename_all = "camelCase")]
+        struct C {
+            id: u64,
+            dir: Dir,
+            name: String,
+        }
+        let name = if dir == Dir::Upload {
+            sftp::base(remote).to_string()
+        } else {
+            local.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+        };
+        let _ = self.app.emit("queue-conflict", C { id, dir, name });
+        rx.await.unwrap_or(Conflict::Skip)
+    }
+
+    /// 프런트의 충돌 답. apply_all이면 이후 항목에도 같은 정책 적용.
+    pub fn conflict_answer(&self, id: u64, action: &str, apply_all: bool) {
+        let a = parse_conflict(action);
+        if apply_all {
+            *self.policy.lock().unwrap() = a;
+        }
+        if let Some(tx) = self.conflict_waiters.lock().unwrap().remove(&id) {
+            let _ = tx.send(a);
+        }
+    }
+
+    /// 새 전송 배치 시작 시 정책을 Ask로 되돌린다 (이전 "모두 적용"이 남지 않게).
+    pub fn reset_policy(&self) {
+        *self.policy.lock().unwrap() = Conflict::Ask;
     }
 
     pub fn cancel(&self, ids: &[u64]) {

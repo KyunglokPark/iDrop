@@ -679,6 +679,24 @@ pub fn base(path: &str) -> &str {
     path.trim_end_matches('/').rsplit('/').next().unwrap_or(path)
 }
 
+/// 원격 경로의 상위 디렉터리 ("/a/b/c.txt" → "/a/b", 루트면 "")
+pub fn base_dir(path: &str) -> &str {
+    let p = path.trim_end_matches('/');
+    match p.rfind('/') {
+        Some(0) => "",
+        Some(i) => &p[..i],
+        None => "",
+    }
+}
+
+/// "이름 (2).확장자" 형태로 번호를 붙인다 (원격 충돌 회피용)
+pub fn numbered(name: &str, n: u32) -> String {
+    match name.rfind('.') {
+        Some(i) if i > 0 => format!("{} ({}){}", &name[..i], n, &name[i..]),
+        _ => format!("{name} ({n})"),
+    }
+}
+
 /// 로컬에 같은 이름이 있으면 "이름 (2).확장자"처럼 겹치지 않는 경로
 pub fn unique_local(dir: &Path, name: &str) -> PathBuf {
     let safe: String = name

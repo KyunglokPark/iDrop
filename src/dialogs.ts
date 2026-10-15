@@ -182,3 +182,39 @@ export function promptText(title: string, initial = ""): Promise<string | null> 
     input.select();
   });
 }
+
+/** 충돌 대화상자 — 덮어쓰기/건너뛰기/이름변경 + "이후 모두 적용" */
+export function conflictDialog(name: string): Promise<{ action: string; applyAll: boolean }> {
+  return new Promise((resolve) => {
+    const ov = overlay();
+    const b = box(ov, t("conflict.title"));
+    const body = document.createElement("div");
+    body.className = "modal-body";
+    const msg = document.createElement("p");
+    msg.textContent = t("conflict.msg", { name });
+    const applyLabel = document.createElement("label");
+    applyLabel.className = "conflict-apply";
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    const span = document.createElement("span");
+    span.textContent = t("conflict.applyAll");
+    applyLabel.append(chk, span);
+    body.append(msg, applyLabel);
+    b.appendChild(body);
+    const row = document.createElement("div");
+    row.className = "modal-btns";
+    const over = btn(t("conflict.overwrite"), "primary");
+    const rename = btn(t("conflict.rename"));
+    const skip = btn(t("conflict.skip"));
+    row.append(over, rename, skip);
+    b.appendChild(row);
+    const done = (action: string) => {
+      ov.remove();
+      resolve({ action, applyAll: chk.checked });
+    };
+    over.onclick = () => done("overwrite");
+    rename.onclick = () => done("rename");
+    skip.onclick = () => done("skip");
+    over.focus();
+  });
+}

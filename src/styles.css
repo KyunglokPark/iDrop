@@ -639,3 +639,12 @@ body {
   color: #1e1e2e;
   font-weight: 600;
 }
+
+.conflict-apply {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}

@@ -36,6 +36,7 @@ pub fn answer(id: &str, a: Answer) {
 }
 
 /// 탭이 닫히면 대기 중인 확인을 거부로 끝낸다.
+#[allow(dead_code)]
 pub fn cancel(id: &str) {
     waiters().lock().unwrap().remove(id);
 }

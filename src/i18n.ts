@@ -102,6 +102,13 @@ const STRINGS: Record<string, { ko: string; en: string }> = {
   "sites.importNone": { ko: "가져올 SSH 세션이 없습니다", en: "No SSH sessions to import" },
   "sites.importDone": { ko: "가져오기 완료", en: "Import complete" },
   "sites.importedN": { ko: "{n}개 가져옴 ({skipped}개 제외)", en: "Imported {n} ({skipped} skipped)" },
+  // ---- 충돌 ----
+  "conflict.title": { ko: "같은 이름이 있습니다", en: "File already exists" },
+  "conflict.msg": { ko: "\"{name}\" 이(가) 이미 있습니다. 어떻게 할까요?", en: "\"{name}\" already exists. What would you like to do?" },
+  "conflict.overwrite": { ko: "덮어쓰기", en: "Overwrite" },
+  "conflict.rename": { ko: "이름 바꿔 저장", en: "Rename" },
+  "conflict.skip": { ko: "건너뛰기", en: "Skip" },
+  "conflict.applyAll": { ko: "이후 모두 같게 적용", en: "Apply to all remaining" },
   // ---- 상태 ----
   "status.connecting": { ko: "접속 중: {host}", en: "Connecting: {host}" },
   "status.connected": { ko: "접속됨: {host}", en: "Connected: {host}" },

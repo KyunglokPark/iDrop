@@ -297,6 +297,11 @@ fn queue_set_concurrency(app: AppHandle, state: State<'_, AppState>, n: usize) {
 }
 
 #[tauri::command]
+fn conflict_answer(app: AppHandle, state: State<'_, AppState>, id: u64, action: String, apply_all: bool) {
+    get_queue(&app, &state).conflict_answer(id, &action, apply_all);
+}
+
+#[tauri::command]
 fn hostkey_answer(id: String, answer: String) {
     let a = match answer.as_str() {
         "save" => hostkey::Answer::Save,
@@ -440,6 +445,7 @@ pub fn run() {
             queue_retry,
             queue_clear_done,
             queue_set_concurrency,
+            conflict_answer,
             save_to_downloads,
             default_download_dir,
             secret_protect,

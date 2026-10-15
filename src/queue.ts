@@ -3,6 +3,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { t } from "./i18n";
+import { conflictDialog } from "./dialogs";
 
 type Dir = "upload" | "download";
 type State = "queued" | "active" | "done" | "failed" | "cancelled";
@@ -144,6 +145,11 @@ export async function initQueue(onItemDone: () => void = () => {}) {
         paintRow(it);
       }
     }
+  });
+
+  await listen<{ id: number; dir: Dir; name: string }>("queue-conflict", async (e) => {
+    const { action, applyAll } = await conflictDialog(e.payload.name);
+    void invoke("conflict_answer", { id: e.payload.id, action, applyAll });
   });
 
   await listen("queue-cleared", () => {
