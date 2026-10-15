@@ -48,8 +48,14 @@ body {
 }
 
 #logo {
-  height: 22px;
-  margin-right: 4px;
+  height: 20px;
+  width: auto;
+  flex: 0 0 auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  /* 어두운 상단 바에서 잘 보이도록 로고를 흰색으로 칠한다 (iDOT와 동일) */
+  filter: brightness(0) invert(1);
+  margin-right: 12px;
 }
 
 #topbar input {
