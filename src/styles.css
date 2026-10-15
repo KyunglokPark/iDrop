@@ -687,3 +687,210 @@ body {
 .ctxmenu-item:hover {
   background: var(--row-sel);
 }
+
+/* ---- 사이트 관리자: iDOT 접속 관리와 같은 그룹 트리 ---- */
+#sites-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+#sites-list li.conn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#sites-list li.conn:hover {
+  background: var(--field);
+}
+
+#sites-list li.conn.indent {
+  margin-left: 12px;
+  border-left: 1px solid var(--field-hi);
+  padding-left: 12px;
+  border-radius: 0 6px 6px 0;
+}
+
+#sites-list li.conn.active {
+  background: var(--accent);
+  color: #11111b;
+}
+
+#sites-list li.conn.active .s-sub {
+  color: #1e293b;
+}
+
+#sites-list .s-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+#sites-list .s-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+}
+
+#sites-list .conn-x,
+#sites-list .conn-copy {
+  position: absolute;
+  top: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0;
+}
+
+#sites-list .conn-x {
+  right: 8px;
+}
+
+#sites-list .conn-copy {
+  right: 28px;
+  font-size: 12px;
+}
+
+#sites-list li.conn:hover .conn-x,
+#sites-list li.conn:hover .conn-copy {
+  opacity: 1;
+}
+
+#sites-list .conn-x:hover,
+#sites-list .conn-copy:hover,
+#sites-list .group-x:hover,
+#sites-list .group-copy:hover,
+#sites-list .group-edit:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--fg);
+}
+
+#sites-list li.group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+}
+
+#sites-list li.group-header:hover {
+  background: var(--field);
+}
+
+#sites-list li.group-header.active {
+  background: var(--accent);
+  color: #11111b;
+}
+
+#sites-list li.group-header.active .caret,
+#sites-list li.group-header.active .group-count {
+  color: #11111b;
+}
+
+#sites-list .caret {
+  width: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+#sites-list .group-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#sites-list .group-count {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--field);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+#sites-list .group-x,
+#sites-list .group-copy,
+#sites-list .group-edit {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0;
+}
+
+#sites-list li.group-header:hover .group-x,
+#sites-list li.group-header:hover .group-copy,
+#sites-list li.group-header:hover .group-edit {
+  opacity: 1;
+}
+
+#sites-list li.group-header.active .group-x,
+#sites-list li.group-header.active .group-copy,
+#sites-list li.group-header.active .group-edit,
+#sites-list li.conn.active .conn-x,
+#sites-list li.conn.active .conn-copy {
+  color: #11111b;
+}
+
+#sites-list .group-rename {
+  flex: 1 1 auto;
+  background: var(--field);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--fg);
+  padding: 2px 6px;
+  outline: none;
+  font-weight: 700;
+}
+
+#sites-list li.empty {
+  color: var(--muted);
+  cursor: default;
+  padding: 8px 10px;
+}
+
+/* 드래그 상태 */
+body.list-dragging,
+body.list-dragging * {
+  cursor: grabbing !important;
+}
+
+#sites-list li.dragging {
+  opacity: 0.45;
+}
+
+#sites-list li.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  background: rgba(137, 180, 250, 0.12);
+}
+
+#sites-list li.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+#sites-list li.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+#sites-list.drop-root {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}

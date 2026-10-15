@@ -205,3 +205,169 @@ mod tests {
         assert_eq!(l[0]["_name"], "Default Settings");
     }
 }
+
+// ---- iDOT localStorage 직접 읽기 ---------------------------------------------
+// iDOT(자매 앱)의 WebView2 localStorage는 LevelDB 파일에 있다. 정식 LevelDB
+// 리더 없이, 파일 바이트에서 키("idot.servers" 등) 출현 지점을 찾아 바로 뒤의
+// 값(JSON)을 괄호 균형으로 잘라낸다. Chromium localStorage 값은 첫 바이트가
+// 0x01이면 Latin-1(ASCII JSON은 그대로), 0x00이면 UTF-16LE다.
+// 같은 파일에 과거 버전 레코드가 여럿 남아 있으므로 "가장 마지막 출현"을 쓴다
+// (파일은 수정 시각 순으로 스캔 — .log가 최신 쓰기를 담는다).
+// 비밀번호(dpapi: 암호문)는 iDrop과 DPAPI 엔트로피가 같아 그대로 복호된다.
+
+fn idot_leveldb_dir() -> Option<std::path::PathBuf> {
+    let base = std::env::var("LOCALAPPDATA").ok()?;
+    let p = std::path::Path::new(&base)
+        .join("com.nezzard.idot")
+        .join("EBWebView")
+        .join("Default")
+        .join("Local Storage")
+        .join("leveldb");
+    p.is_dir().then_some(p)
+}
+
+/// JSON 배열/객체를 괄호 균형으로 잘라낸다 (문자열·이스케이프 고려). step=1(u8) 또는 2(UTF-16LE).
+fn balanced_json(bytes: &[u8], start: usize, step: usize) -> Option<String> {
+    let open = *bytes.get(start)?;
+    let close = match open {
+        b'[' => b']',
+        b'{' => b'}',
+        _ => return None,
+    };
+    let mut depth = 0i32;
+    let mut in_str = false;
+    let mut esc = false;
+    let mut out = Vec::new();
+    let mut i = start;
+    while i < bytes.len() {
+        if step == 2 && bytes.get(i + 1).copied().unwrap_or(1) != 0 {
+            return None; // UTF-16LE 상위 바이트가 0이 아니면 ASCII JSON이 아님 — 한글 등
+        }
+        let b = bytes[i];
+        out.push(b);
+        if in_str {
+            if esc {
+                esc = false;
+            } else if b == b'\\' {
+                esc = true;
+            } else if b == b'"' {
+                in_str = false;
+            }
+        } else if b == b'"' {
+            in_str = true;
+        } else if b == open {
+            depth += 1;
+        } else if b == close {
+            depth -= 1;
+            if depth == 0 {
+                return String::from_utf8(out).ok();
+            }
+        }
+        i += step;
+    }
+    None
+}
+
+/// UTF-16LE 구간용 — 한글이 섞인 JSON도 제대로 디코드한다.
+fn balanced_json_u16(bytes: &[u8], start: usize) -> Option<String> {
+    let units: Vec<u16> = bytes[start..]
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .collect();
+    let open = *units.first()? as u8 as char;
+    let close = match open {
+        '[' => ']',
+        '{' => '}',
+        _ => return None,
+    };
+    let mut depth = 0i32;
+    let mut in_str = false;
+    let mut esc = false;
+    for (n, &u) in units.iter().enumerate() {
+        let c = char::from_u32(u as u32).unwrap_or('\u{fffd}');
+        if in_str {
+            if esc {
+                esc = false;
+            } else if c == '\\' {
+                esc = true;
+            } else if c == '"' {
+                in_str = false;
+            }
+        } else if c == '"' {
+            in_str = true;
+        } else if c == open {
+            depth += 1;
+        } else if c == close {
+            depth -= 1;
+            if depth == 0 {
+                return String::from_utf16(&units[..=n]).ok();
+            }
+        }
+    }
+    None
+}
+
+/// 파일 바이트에서 `key` 레코드의 JSON 값 — 마지막 출현을 돌려준다.
+fn extract_value(bytes: &[u8], key: &[u8]) -> Option<String> {
+    let mut found = None;
+    let mut from = 0;
+    while let Some(rel) = bytes[from..].windows(key.len()).position(|w| w == key) {
+        let after = from + rel + key.len();
+        // 키 직후 몇 바이트 안에 값 마커(0x00/0x01)와 '['가 온다
+        for j in after..(after + 6).min(bytes.len().saturating_sub(1)) {
+            match bytes[j] {
+                0x01 => {
+                    if bytes.get(j + 1) == Some(&b'[') {
+                        if let Some(s) = balanced_json(bytes, j + 1, 1) {
+                            if serde_json::from_str::<serde_json::Value>(&s).is_ok() {
+                                found = Some(s);
+                            }
+                        }
+                    }
+                }
+                0x00 => {
+                    if bytes.get(j + 1) == Some(&b'[') {
+                        if let Some(s) = balanced_json_u16(bytes, j + 1) {
+                            if serde_json::from_str::<serde_json::Value>(&s).is_ok() {
+                                found = Some(s);
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        from = after;
+    }
+    found
+}
+
+/// iDOT 저장 세션(servers)과 그룹 순서(groups)의 JSON 문자열.
+pub fn idot_sessions() -> Result<(String, String), String> {
+    let dir = idot_leveldb_dir().ok_or("iDOT 저장 데이터를 찾을 수 없습니다 (iDOT가 설치·실행된 적이 있어야 합니다)")?;
+    let mut files: Vec<(std::time::SystemTime, std::path::PathBuf)> = std::fs::read_dir(&dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .filter(|e| {
+            let n = e.file_name().to_string_lossy().into_owned();
+            n.ends_with(".log") || n.ends_with(".ldb")
+        })
+        .filter_map(|e| Some((e.metadata().ok()?.modified().ok()?, e.path())))
+        .collect();
+    files.sort_by_key(|(t, _)| *t); // 오래된 파일 → 최신 파일 순 (나중 발견이 이긴다)
+
+    let mut servers = None;
+    let mut groups = None;
+    for (_, p) in files {
+        if let Ok(bytes) = std::fs::read(&p) {
+            if let Some(s) = extract_value(&bytes, b"idot.servers") {
+                servers = Some(s);
+            }
+            if let Some(g) = extract_value(&bytes, b"idot.groups") {
+                groups = Some(g);
+            }
+        }
+    }
+    let servers = servers.ok_or("iDOT 세션 목록을 찾지 못했습니다")?;
+    Ok((servers, groups.unwrap_or_else(|| "[]".into())))
+}

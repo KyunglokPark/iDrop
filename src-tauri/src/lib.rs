@@ -113,6 +113,23 @@ fn import_putty() -> Vec<std::collections::BTreeMap<String, String>> {
 }
 
 #[derive(serde::Serialize)]
+struct IdotImport {
+    /// iDOT localStorage의 세션 배열 (JSON 문자열 그대로 — 프런트가 파싱)
+    servers: String,
+    groups: String,
+}
+
+/// iDOT 저장 세션을 localStorage(LevelDB)에서 직접 읽는다.
+#[tauri::command]
+async fn import_idot() -> Result<IdotImport, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        import::idot_sessions().map(|(servers, groups)| IdotImport { servers, groups })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[derive(serde::Serialize)]
 struct XshellImport {
     root: Option<String>,
     files: Vec<import::XshFile>,
@@ -452,6 +469,7 @@ pub fn run() {
             secret_unprotect,
             import_putty,
             import_xshell,
+            import_idot,
             hostkey_answer,
             connect::auth_answer,
             pick_files,
