@@ -575,8 +575,14 @@ body {
 .sites-left-btns {
   display: flex;
   gap: 4px;
-  padding: 8px;
+  padding: 6px 8px;
   border-top: 1px solid #00000040;
+}
+
+/* 버튼 줄이 둘 연속일 때 둘째 줄은 테두리·위 여백 제거해 붙인다 */
+.sites-left-btns + .sites-left-btns {
+  border-top: none;
+  padding-top: 0;
 }
 
 .sites-left-btns button {
