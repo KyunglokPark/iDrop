@@ -381,6 +381,12 @@ body {
   background: var(--row-sel);
 }
 
+/* 키보드 커서 — 포커스된 패널에서 현재 행 테두리 */
+.panel-body:focus .frow.cursor {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
 .frow.dir .c-name {
   color: var(--accent);
 }

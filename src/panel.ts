@@ -78,6 +78,7 @@ export class Panel {
   shown: PanelEntry[] = [];
   selected = new Set<string>();
   anchor = -1;
+  cursor = -1; // 키보드 커서 (shown 기준 인덱스, -1 = 없음)
   showHidden = false;
   sortKey: SortKey = "name";
   sortAsc = true;
@@ -153,6 +154,7 @@ export class Panel {
     this.entries = entries;
     this.selected.clear();
     this.anchor = -1;
+    this.cursor = -1;
     this.pathInput.value = real;
     this.render();
     this.onNavigated(real);
@@ -209,8 +211,10 @@ export class Panel {
     const row = document.createElement("div");
     row.className = "frow" + (e.isDir ? " dir" : "") + (this.adapter.kind === "remote" ? " remote" : "");
     if (idx >= 0 && this.selected.has(e.name)) row.classList.add("sel");
+    if (idx >= 0 && idx === this.cursor) row.classList.add("cursor");
     if (idx >= 0) {
       row.dataset.name = e.name;
+      row.dataset.idx = String(idx);
       // 패널 간 드래그 — 포인터 기반 자체 구현.
       // (Tauri의 dragDropEnabled(탐색기→앱 드롭)가 WebView2에서 HTML5 DnD를
       //  가로채므로 HTML5 drag 이벤트는 쓸 수 없다 — iDOT 탭 드래그와 같은 방식)
@@ -312,6 +316,7 @@ export class Panel {
         void this.navigate(this.adapter.parent(this.path)).catch(() => {});
         return;
       }
+      this.cursor = idx;
       if (ev.shiftKey && this.anchor >= 0) {
         const [a, b] = [Math.min(this.anchor, idx), Math.max(this.anchor, idx)];
         if (!ev.ctrlKey) this.selected.clear();
@@ -341,21 +346,61 @@ export class Panel {
     return row;
   }
 
-  /** 선택 표시만 갱신 (행 DOM 유지 — 더블클릭·드래그가 끊기지 않게) */
+  /** 선택·커서 표시만 갱신 (행 DOM 유지 — 더블클릭·드래그가 끊기지 않게) */
   private paintSelection() {
     for (const el of Array.from(this.rows.children) as HTMLElement[]) {
       const name = el.dataset.name;
       if (name !== undefined) el.classList.toggle("sel", this.selected.has(name));
+      const idx = el.dataset.idx;
+      if (idx !== undefined) el.classList.toggle("cursor", Number(idx) === this.cursor);
     }
   }
 
+  /** 커서를 idx로 옮기고 단일 선택, 보이도록 스크롤 */
+  private moveCursor(idx: number, extendSel: boolean) {
+    if (!this.shown.length) return;
+    idx = Math.max(0, Math.min(this.shown.length - 1, idx));
+    this.cursor = idx;
+    const name = this.shown[idx].name;
+    if (extendSel && this.anchor >= 0) {
+      const [a, b] = [Math.min(this.anchor, idx), Math.max(this.anchor, idx)];
+      this.selected.clear();
+      for (let i = a; i <= b; i++) this.selected.add(this.shown[i].name);
+    } else {
+      this.selected.clear();
+      this.selected.add(name);
+      this.anchor = idx;
+    }
+    this.paintSelection();
+    // 커서 행을 보이게 스크롤
+    const row = this.rows.querySelector<HTMLElement>(`[data-idx="${idx}"]`);
+    row?.scrollIntoView({ block: "nearest" });
+  }
+
   private onKey(e: KeyboardEvent) {
-    if (e.key === "F5") {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      this.moveCursor(this.cursor < 0 ? 0 : this.cursor + 1, e.shiftKey);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      this.moveCursor(this.cursor < 0 ? 0 : this.cursor - 1, e.shiftKey);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      this.moveCursor(0, e.shiftKey);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      this.moveCursor(this.shown.length - 1, e.shiftKey);
+    } else if (e.key === "ArrowRight") {
+      // 커서가 폴더면 진입
+      e.preventDefault();
+      const cur = this.cursor >= 0 ? this.shown[this.cursor] : undefined;
+      if (cur?.isDir) void this.navigate(this.adapter.join(this.path, cur.name)).catch(() => {});
+    } else if (e.key === "ArrowLeft" || e.key === "Backspace") {
+      e.preventDefault();
+      void this.navigate(this.adapter.parent(this.path)).catch(() => {});
+    } else if (e.key === "F5") {
       e.preventDefault();
       void this.refresh();
-    } else if (e.key === "Backspace") {
-      e.preventDefault();
-      void this.navigate(this.adapter.parent(this.path));
     } else if (e.key === "Enter") {
       e.preventDefault();
       const sel = this.selectedEntries();
@@ -364,7 +409,7 @@ export class Panel {
       } else if (sel.length) {
         this.onActivateNames(sel.map((s) => s.name));
       }
-    } else if (e.key === "a" && e.ctrlKey) {
+    } else if ((e.key === "a" || e.key === "A") && e.ctrlKey) {
       e.preventDefault();
       this.shown.forEach((s) => this.selected.add(s.name));
       this.paintSelection();
