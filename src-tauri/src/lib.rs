@@ -171,7 +171,7 @@ struct SiteStateEvt {
     error: Option<String>,
 }
 
-fn emit_site(app: &AppHandle, state: &str, host: &str, home: Option<String>, error: Option<String>) {
+pub(crate) fn emit_site(app: &AppHandle, state: &str, host: &str, home: Option<String>, error: Option<String>) {
     let _ = app.emit(
         "site-state",
         SiteStateEvt { state: state.into(), host: host.into(), home, error },
@@ -188,15 +188,18 @@ async fn site_connect(
     encoding: String,
     protocol: Option<String>,
 ) -> Result<String, String> {
-    // 이전 연결 정리
-    state.site.lock().await.take();
+    // 이전 연결 정리 — 옛 사이트를 종료시키고(스케줄러 포함) 깨운다
+    if let Some(old) = state.site.lock().await.take() {
+        old.shutdown();
+    }
+    get_queue(&app, &state).wake_all();
     emit_site(&app, "connecting", &hop.host, None, None);
     let is_ftp = protocol.as_deref() == Some("ftp");
 
     let r: Result<(Arc<SitePool>, String), String> = async {
         let site = if is_ftp {
             // FTP: SSH 인증 없이 제어연결로 바로 로그인
-            let site = SitePool::new_ftp(hop.host.clone(), hop.port, hop.username.clone(), hop.password.clone());
+            let site = SitePool::new_ftp(app.clone(), hop.clone());
             match encoding.as_str() {
                 "euc-kr" => site.codec.euc.store(true, Ordering::Relaxed),
                 _ => site.codec.euc.store(false, Ordering::Relaxed), // FTP는 기본 UTF-8 (auto 미지원)
@@ -204,15 +207,19 @@ async fn site_connect(
             site
         } else {
             let (handle, _user) = connect::connect_and_auth(&app, "site", &hop).await?;
-            let site = SitePool::new_sftp(handle, hop.host.clone());
+            // 인코딩 자동감지는 핸들을 pool로 옮기기 전에 수행
+            let euc_auto = if encoding == "auto" || encoding.is_empty() {
+                connect::server_charset_is_euc(&handle).await
+            } else {
+                None
+            };
+            let site = SitePool::new_sftp(app.clone(), hop.clone(), handle);
             match encoding.as_str() {
                 "euc-kr" => site.codec.euc.store(true, Ordering::Relaxed),
                 "utf-8" => site.codec.euc.store(false, Ordering::Relaxed),
                 _ => {
-                    if let Some(h) = site.ssh_handle() {
-                        if let Some(euc) = connect::server_charset_is_euc(h).await {
-                            site.codec.euc.store(euc, Ordering::Relaxed);
-                        }
+                    if let Some(euc) = euc_auto {
+                        site.codec.euc.store(euc, Ordering::Relaxed);
                     }
                 }
             }
@@ -241,8 +248,10 @@ async fn site_connect(
 #[tauri::command]
 async fn site_disconnect(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     if let Some(site) = state.site.lock().await.take() {
+        site.shutdown(); // 자동 재연결·재시도 중단
         emit_site(&app, "disconnected", &site.host, None, None);
     }
+    get_queue(&app, &state).wake_all(); // 스케줄러가 종료 신호를 보게 깨운다
     Ok(())
 }
 
@@ -252,7 +261,8 @@ async fn site_get(state: &AppState) -> Result<Arc<SitePool>, String> {
         .lock()
         .await
         .clone()
-        .filter(|s| s.is_alive())
+        // is_alive가 아니라 shutdown으로 판정 — 일시 끊김은 browse()/take_xfer()가 자동 재연결한다
+        .filter(|s| !s.is_shutdown())
         .ok_or_else(|| tr!("연결되어 있지 않습니다", "not connected").to_string())
 }
 

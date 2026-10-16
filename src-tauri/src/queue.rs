@@ -35,6 +35,20 @@ fn parse_conflict(s: &str) -> Conflict {
     }
 }
 
+/// 연결 끊김으로 자동 재시도할 최대 횟수 (무한루프 방지).
+const MAX_AUTO_RETRIES: u32 = 8;
+
+/// 전송 실패 메시지가 "연결 끊김"류인지 (권한·없는 파일 등 논리 오류는 자동 재시도하지 않음).
+fn is_conn_error(e: &str) -> bool {
+    const KEYS: &[&str] = &[
+        "closed", "connection", "connect", "reset", "broken pipe", "pipe", "eof",
+        "timed out", "timeout", "no response", "채널", "연결", "접속",
+        "응답 없음", "시간 초과", "sftp",
+    ];
+    let lo = e.to_ascii_lowercase();
+    KEYS.iter().any(|k| lo.contains(k))
+}
+
 #[derive(Clone, Copy, PartialEq, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Dir {
@@ -62,6 +76,8 @@ struct Item {
     cancel: Arc<AtomicBool>,
     /// 중단 시 기록한 부분 전송 바이트 (>0이면 재시도 때 이 지점부터 이어받는다)
     resume_from: u64,
+    /// 연결 끊김으로 자동 재시도한 횟수 (무한루프 방지 상한)
+    auto_attempts: u32,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -114,6 +130,11 @@ impl Queue {
     pub fn set_concurrency(&self, n: usize) {
         self.concurrency.store(n.clamp(1, 8), Ordering::Relaxed);
         self.wake.notify_one();
+    }
+
+    /// 대기 중인 모든 스케줄러를 깨운다 (사이트 교체/종료 시 옛 스케줄러가 종료 신호를 보게).
+    pub fn wake_all(&self) {
+        self.wake.notify_waiters();
     }
 
     fn emit_state(&self, id: u64, state: &ItemState) {
@@ -175,6 +196,7 @@ impl Queue {
                 state: ItemState::Queued,
                 cancel: Arc::new(AtomicBool::new(false)),
                 resume_from: 0,
+                auto_attempts: 0,
             },
         );
         self.order.lock().unwrap().push(id);
@@ -263,6 +285,10 @@ impl Queue {
         let q = self.clone();
         tauri::async_runtime::spawn(async move {
             loop {
+                // 사용자가 끊었으면(또는 사이트가 교체됐으면) 이 스케줄러는 종료
+                if site.is_shutdown() {
+                    break;
+                }
                 // 다음 Queued 항목을 동시성 범위에서 꺼낸다
                 let next = {
                     let max = q.concurrency.load(Ordering::Relaxed);
@@ -295,10 +321,13 @@ impl Queue {
                         });
                     }
                     None => {
-                        if !site.is_alive() {
+                        // 연결이 끊겨 있어도 바로 종료하지 않는다 (자동 재연결로 복구될 수 있음).
+                        // 사용자가 명시적으로 끊었을 때만 종료한다. 타임아웃을 둬서
+                        // 깨우기 알림을 놓치더라도 주기적으로 종료 신호를 다시 확인한다.
+                        if site.is_shutdown() {
                             break;
                         }
-                        q.wake.notified().await;
+                        let _ = tokio::time::timeout(Duration::from_secs(5), q.wake.notified()).await;
                     }
                 }
             }
@@ -374,9 +403,43 @@ impl Queue {
         // 진행률 제거 전에 부분 전송량을 읽어 둔다 (중단 시 이어받기 기준점)
         let partial = self.progress.lock().unwrap().get(&id).copied().unwrap_or(0);
         self.progress.lock().unwrap().remove(&id);
-        let interrupted = cancel.load(Ordering::Relaxed) || result.is_err();
-        let next_resume = if interrupted && partial > 0 { partial } else { 0 };
-        let state = if cancel.load(Ordering::Relaxed) {
+        let user_cancelled = cancel.load(Ordering::Relaxed);
+        let err = result.as_ref().err().cloned();
+        let next_resume = if (user_cancelled || err.is_some()) && partial > 0 { partial } else { 0 };
+
+        // 연결 끊김으로 실패했는가? (사용자 취소·논리 오류는 제외)
+        let conn_lost = !user_cancelled
+            && err.is_some()
+            && (!site.is_alive() || err.as_deref().map(is_conn_error).unwrap_or(false));
+
+        // 자동 재시도: 연결이 끊겨 실패 && 사용자 종료 아님 && 상한 미만
+        //   → 백오프 후 다시 Queued로. 스케줄러가 재연결하고 resume_from부터 이어받는다.
+        if conn_lost && !site.is_shutdown() {
+            let attempts = self
+                .items
+                .lock()
+                .unwrap()
+                .get(&id)
+                .map(|it| it.auto_attempts)
+                .unwrap_or(0);
+            if attempts < MAX_AUTO_RETRIES {
+                let backoff = Duration::from_millis(500u64 << attempts.min(4)); // 0.5·1·2·4·8초
+                tokio::time::sleep(backoff).await;
+                if !site.is_shutdown() {
+                    if let Some(it) = self.items.lock().unwrap().get_mut(&id) {
+                        it.resume_from = next_resume;
+                        it.auto_attempts = attempts + 1;
+                        it.cancel = Arc::new(AtomicBool::new(false));
+                        it.state = ItemState::Queued;
+                    }
+                    self.emit_state(id, &ItemState::Queued);
+                    self.wake.notify_one();
+                    return;
+                }
+            }
+        }
+
+        let state = if user_cancelled {
             ItemState::Cancelled
         } else {
             match result {
@@ -502,6 +565,7 @@ impl Queue {
                 if let Some(it) = items.get_mut(id) {
                     if matches!(it.state, ItemState::Failed(_) | ItemState::Cancelled) {
                         it.cancel = Arc::new(AtomicBool::new(false));
+                        it.auto_attempts = 0; // 수동 재시도는 자동 재시도 예산을 되살린다
                         it.state = ItemState::Queued;
                         self.emit_state(*id, &ItemState::Queued);
                     }
