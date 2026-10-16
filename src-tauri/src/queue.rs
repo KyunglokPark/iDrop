@@ -60,6 +60,8 @@ struct Item {
     is_mkdir: bool,
     state: ItemState,
     cancel: Arc<AtomicBool>,
+    /// 중단 시 기록한 부분 전송 바이트 (>0이면 재시도 때 이 지점부터 이어받는다)
+    resume_from: u64,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -172,6 +174,7 @@ impl Queue {
                 is_mkdir,
                 state: ItemState::Queued,
                 cancel: Arc::new(AtomicBool::new(false)),
+                resume_from: 0,
             },
         );
         self.order.lock().unwrap().push(id);
@@ -304,10 +307,10 @@ impl Queue {
 
     async fn run_item(&self, site: Arc<SitePool>, id: u64) {
         // 항목 정보 복제
-        let (dir, local, remote, is_mkdir, cancel) = {
+        let (dir, local, remote, is_mkdir, cancel, resume_from) = {
             let items = self.items.lock().unwrap();
             let Some(it) = items.get(&id) else { return };
-            (it.dir, it.local.clone(), it.remote.clone(), it.is_mkdir, it.cancel.clone())
+            (it.dir, it.local.clone(), it.remote.clone(), it.is_mkdir, it.cancel.clone(), it.resume_from)
         };
 
         let result: Result<(), String> = async {
@@ -331,17 +334,20 @@ impl Queue {
                 return Ok(());
             }
 
-            // 충돌 검사 — 대상이 이미 있으면 정책에 따른다 (대상 경로가 바뀔 수 있다)
-            let (local, remote) = self.resolve_conflict(&site, dir, id, local, remote).await?;
+            // 충돌 검사 — 대상이 이미 있으면 정책/이어받기에 따른다 (대상 경로·offset이 바뀔 수 있다)
+            let (local, remote, offset) =
+                self.resolve_conflict(&site, dir, id, local, remote, resume_from).await?;
             if remote.is_empty() {
                 return Ok(()); // 건너뛰기 (Skip)
             }
 
             let s = site.take_xfer().await?;
-            let mut acc = 0u64;
+            // 이어받기면 이미 전송된 만큼을 진행률 시작점으로 (퍼센트가 정확히 이어지게)
+            let mut acc = offset;
+            *self.progress.lock().unwrap().entry(id).or_insert(0) = offset;
             let res = match dir {
                 Dir::Upload => {
-                    s.upload_file(&local, &remote, &cancel, &mut |d| {
+                    s.upload_file(&local, &remote, offset, &cancel, &mut |d| {
                         acc += d;
                         *self.progress.lock().unwrap().entry(id).or_insert(0) = acc;
                         self.done_bytes.fetch_add(d, Ordering::Relaxed);
@@ -352,7 +358,7 @@ impl Queue {
                     if let Some(p) = local.parent() {
                         let _ = tokio::fs::create_dir_all(p).await;
                     }
-                    s.download_file(&remote, &local, &cancel, &mut |d| {
+                    s.download_file(&remote, &local, offset, &cancel, &mut |d| {
                         acc += d;
                         *self.progress.lock().unwrap().entry(id).or_insert(0) = acc;
                         self.done_bytes.fetch_add(d, Ordering::Relaxed);
@@ -365,7 +371,11 @@ impl Queue {
         }
         .await;
 
+        // 진행률 제거 전에 부분 전송량을 읽어 둔다 (중단 시 이어받기 기준점)
+        let partial = self.progress.lock().unwrap().get(&id).copied().unwrap_or(0);
         self.progress.lock().unwrap().remove(&id);
+        let interrupted = cancel.load(Ordering::Relaxed) || result.is_err();
+        let next_resume = if interrupted && partial > 0 { partial } else { 0 };
         let state = if cancel.load(Ordering::Relaxed) {
             ItemState::Cancelled
         } else {
@@ -376,11 +386,15 @@ impl Queue {
         };
         if let Some(it) = self.items.lock().unwrap().get_mut(&id) {
             it.state = state.clone();
+            it.resume_from = next_resume;
         }
         self.emit_state(id, &state);
     }
 
-    /// 충돌 해소. Skip이면 remote를 ""로, Rename이면 비충돌 경로로 바꿔 돌려준다.
+    /// 충돌 해소. 반환값은 (로컬, 원격, offset).
+    /// - Skip이면 remote를 "", Rename이면 비충돌 경로로 바꿔 돌려준다.
+    /// - 우리가 중단했던 전송의 재시도(resume_from>0)이고 부분 파일이 그대로면
+    ///   충돌 대화상자 없이 offset>0으로 이어받는다.
     async fn resolve_conflict(
         &self,
         site: &Arc<SitePool>,
@@ -388,22 +402,29 @@ impl Queue {
         id: u64,
         local: PathBuf,
         remote: String,
-    ) -> Result<(PathBuf, String), String> {
-        let exists = match dir {
-            Dir::Upload => site.browse().await?.stat(&remote, true).await.is_ok(),
-            Dir::Download => tokio::fs::try_exists(&local).await.unwrap_or(false),
+        resume_from: u64,
+    ) -> Result<(PathBuf, String, u64), String> {
+        // 대상의 현재 크기 (없으면 None)
+        let dest_size = match dir {
+            Dir::Upload => site.browse().await?.stat(&remote, true).await.ok().and_then(|a| a.size),
+            Dir::Download => tokio::fs::metadata(&local).await.ok().map(|m| m.len()),
         };
-        if !exists {
-            return Ok((local, remote));
+        let Some(dsize) = dest_size else {
+            return Ok((local, remote, 0)); // 대상 없음 → 처음부터 전송
+        };
+        // 우리가 끊은 전송의 재개이고, 부분 파일이 기록 그대로면 이어받기
+        if resume_from > 0 && dsize == resume_from {
+            return Ok((local, remote, resume_from));
         }
+        // 그 외 "이미 존재" → 기존 충돌 정책 (처음부터)
         let policy = *self.policy.lock().unwrap();
         let action = match policy {
             Conflict::Ask => self.ask_conflict(id, dir, &local, &remote).await,
             other => other,
         };
         match action {
-            Conflict::Skip => Ok((local, String::new())),
-            Conflict::Overwrite | Conflict::Ask => Ok((local, remote)),
+            Conflict::Skip => Ok((local, String::new(), 0)),
+            Conflict::Overwrite | Conflict::Ask => Ok((local, remote, 0)),
             Conflict::Rename => match dir {
                 Dir::Upload => {
                     let s = site.browse().await?;
@@ -412,7 +433,7 @@ impl Queue {
                     loop {
                         let cand = format!("{dir_path}/{}", sftp::numbered(sftp::base(&remote), n));
                         if s.stat(&cand, true).await.is_err() {
-                            return Ok((local, cand));
+                            return Ok((local, cand, 0));
                         }
                         n += 1;
                     }
@@ -420,7 +441,7 @@ impl Queue {
                 Dir::Download => {
                     let parent = local.parent().map(|p| p.to_path_buf()).unwrap_or_default();
                     let name = local.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-                    Ok((sftp::unique_local(&parent, &name), remote))
+                    Ok((sftp::unique_local(&parent, &name), remote, 0))
                 }
             },
         }

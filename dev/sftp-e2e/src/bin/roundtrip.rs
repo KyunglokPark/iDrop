@@ -34,7 +34,7 @@ async fn main() {
     let cancel = AtomicBool::new(false);
     let remote = format!("{base}/파일 테스트.bin"); // 한글 이름 포함
     let mut total = 0u64;
-    s.upload_file(&tmp, &remote, &cancel, &mut |delta| total += delta)
+    s.upload_file(&tmp, &remote, 0, &cancel, &mut |delta| total += delta)
         .await
         .expect("upload");
     assert_eq!(total, data.len() as u64, "업로드 진행률 증분 합계");
@@ -42,10 +42,37 @@ async fn main() {
     // 3) 다운로드 후 해시 비교
     let dl: PathBuf = std::env::temp_dir().join("idrop-e2e-dl.bin");
     let _ = std::fs::remove_file(&dl);
-    s.download_file(&remote, &dl, &cancel, &mut |_| {})
+    s.download_file(&remote, &dl, 0, &cancel, &mut |_| {})
         .await
         .expect("download");
     assert_eq!(hash(&tmp), hash(&dl), "왕복 해시 불일치!");
+
+    // 3b) 이어받기(offset) — 실제 OpenSSH sftp-server 대상 SFTP 재개 검증
+    let half = data.len() as u64 / 2;
+    // 업로드 이어받기: 원격에 앞 절반만 올린 뒤 offset부터 재개
+    let rremote = format!("{base}/resume.bin");
+    {
+        let partial = std::env::temp_dir().join("idrop-e2e-partial.bin");
+        std::fs::write(&partial, &data[..half as usize]).unwrap();
+        s.upload_file(&partial, &rremote, 0, &cancel, &mut |_| {}).await.expect("partial up");
+        assert_eq!(s.stat(&rremote, true).await.unwrap().size, Some(half), "부분 업로드 크기");
+        let mut up2 = 0u64;
+        s.upload_file(&tmp, &rremote, half, &cancel, &mut |d| up2 += d).await.expect("resume up");
+        assert_eq!(up2, data.len() as u64 - half, "이어받은 바이트=나머지");
+        let back = std::env::temp_dir().join("idrop-e2e-resume-back.bin");
+        let _ = std::fs::remove_file(&back);
+        s.download_file(&rremote, &back, 0, &cancel, &mut |_| {}).await.expect("verify dl");
+        assert_eq!(hash(&tmp), hash(&back), "업로드 이어받기 해시 불일치!");
+    }
+    // 다운로드 이어받기: 로컬에 앞 절반만 받은 상태에서 offset부터 재개
+    {
+        let rdl = std::env::temp_dir().join("idrop-e2e-resume-dl.bin");
+        std::fs::write(&rdl, &data[..half as usize]).unwrap();
+        let mut dn2 = 0u64;
+        s.download_file(&remote, &rdl, half, &cancel, &mut |d| dn2 += d).await.expect("resume dl");
+        assert_eq!(dn2, data.len() as u64 - half, "이어받은 바이트=나머지");
+        assert_eq!(hash(&tmp), hash(&rdl), "다운로드 이어받기 해시 불일치!");
+    }
 
     // 4) rename → stat → 재귀 삭제
     let renamed = format!("{base}/renamed.bin");
@@ -55,5 +82,5 @@ async fn main() {
     s.remove(&base).await.expect("recursive remove");
     assert!(s.stat(&base, true).await.is_err(), "삭제됐어야 함");
 
-    println!("PASS roundtrip: 업로드/다운로드 해시 일치 + rename + 재귀 삭제");
+    println!("PASS roundtrip: 업로드/다운로드 해시 일치 + 이어받기(업/다운) + rename + 재귀 삭제");
 }

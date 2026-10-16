@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
 use tokio::io::AsyncBufReadExt;
 use tokio::net::TcpStream;
 
@@ -320,17 +320,32 @@ impl FileConn for FtpConn {
         &self,
         remote: &str,
         local: &Path,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String> {
         let mut g = self.inner.lock().await;
         let mut data = g.open_data().await?;
+        // 이어받기: RETR 직전에 REST로 재시작 지점을 알린다 (350 기대).
+        if offset > 0 {
+            let (c, t) = g.cmd(format!("REST {offset}").as_bytes()).await?;
+            if c != 350 {
+                return Err(ftp_err(&t, c));
+            }
+        }
         let retr = self.line("RETR", remote);
         let (code, text) = g.cmd(&retr).await?;
         if code != 150 && code != 125 {
             return Err(ftp_err(&text, code));
         }
-        let mut file = tokio::fs::File::create(local).await.map_err(io_err)?;
+        // offset>0: 기존 부분 파일을 자르지 않고 그 지점으로 seek. 0: 새로 만든다.
+        let mut file = if offset > 0 {
+            let mut f = tokio::fs::OpenOptions::new().write(true).open(local).await.map_err(io_err)?;
+            f.seek(std::io::SeekFrom::Start(offset)).await.map_err(io_err)?;
+            f
+        } else {
+            tokio::fs::File::create(local).await.map_err(io_err)?
+        };
         let mut buf = vec![0u8; CHUNK];
         let mut aborted = false;
         loop {
@@ -348,8 +363,7 @@ impl FileConn for FtpConn {
         drop(data);
         file.flush().await.map_err(io_err)?;
         if aborted {
-            let _ = tokio::fs::remove_file(local).await;
-            // 서버 전송 중단
+            // 부분 파일은 남겨 둔다 (재시도 시 이어받기용). 서버 전송만 중단.
             let _ = g.cmd(b"ABOR").await;
             return Err(tr_s!("전송이 취소되었습니다", "transfer cancelled"));
         }
@@ -362,12 +376,23 @@ impl FileConn for FtpConn {
         &self,
         local: &Path,
         remote: &str,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String> {
         let mut file = tokio::fs::File::open(local).await.map_err(io_err)?;
+        if offset > 0 {
+            file.seek(std::io::SeekFrom::Start(offset)).await.map_err(io_err)?;
+        }
         let mut g = self.inner.lock().await;
         let mut data = g.open_data().await?;
+        // 이어받기: STOR 직전에 REST로 재시작 지점을 알린다 (350 기대).
+        if offset > 0 {
+            let (c, t) = g.cmd(format!("REST {offset}").as_bytes()).await?;
+            if c != 350 {
+                return Err(ftp_err(&t, c));
+            }
+        }
         let stor = self.line("STOR", remote);
         let (code, text) = g.cmd(&stor).await?;
         if code != 150 && code != 125 {

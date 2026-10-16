@@ -59,7 +59,7 @@ async fn main() {
             while i < N {
                 let local = dir.join(format!("f{i:04}.bin"));
                 let remote = format!("{base}/f{i:04}.bin");
-                s.upload_file(&local, &remote, &cancel, &mut |_| {}).await.expect("upload");
+                s.upload_file(&local, &remote, 0, &cancel, &mut |_| {}).await.expect("upload");
                 uploaded.fetch_add(1, Ordering::Relaxed);
                 i += CONCURRENCY;
             }
@@ -82,7 +82,7 @@ async fn main() {
     for i in (0..N).step_by(50) {
         let remote = format!("{base}/f{i:04}.bin");
         let local = dl.join(format!("f{i:04}.bin"));
-        browse.download_file(&remote, &local, &cancel, &mut |_| {}).await.expect("download");
+        browse.download_file(&remote, &local, 0, &cancel, &mut |_| {}).await.expect("download");
         let mut hsh = Sha256::new();
         hsh.update(std::fs::read(&local).unwrap());
         assert_eq!(hsh.finalize().to_vec(), hashes[i], "해시 불일치 f{i:04}");
@@ -98,7 +98,7 @@ async fn main() {
         c2.store(true, Ordering::Relaxed);
     });
     let r = channels[0]
-        .upload_file(&big, &format!("{base}/big.bin"), &cancel, &mut |_| {})
+        .upload_file(&big, &format!("{base}/big.bin"), 0, &cancel, &mut |_| {})
         .await;
     assert!(r.is_err() || cancel.load(Ordering::Relaxed), "취소 플래그 반영");
 

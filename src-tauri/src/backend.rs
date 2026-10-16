@@ -18,10 +18,12 @@ pub trait FileConn: Send + Sync {
     async fn mkdir(&self, path: &str) -> Result<(), String>;
     async fn rename(&self, from: &str, to: &str) -> Result<(), String>;
     async fn remove(&self, path: &str) -> Result<(), String>;
+    /// offset>0이면 대상의 기존 부분 바이트 뒤에서 이어받는다 (이어받기).
     async fn download_file(
         &self,
         remote: &str,
         local: &Path,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String>;
@@ -29,6 +31,7 @@ pub trait FileConn: Send + Sync {
         &self,
         local: &Path,
         remote: &str,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String>;
@@ -61,18 +64,20 @@ impl FileConn for Sftp {
         &self,
         remote: &str,
         local: &Path,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String> {
-        Sftp::download_file(self, remote, local, cancel, prog).await
+        Sftp::download_file(self, remote, local, offset, cancel, prog).await
     }
     async fn upload_file(
         &self,
         local: &Path,
         remote: &str,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String> {
-        Sftp::upload_file(self, local, remote, cancel, prog).await
+        Sftp::upload_file(self, local, remote, offset, cancel, prog).await
     }
 }

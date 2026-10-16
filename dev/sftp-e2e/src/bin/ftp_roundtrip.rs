@@ -36,8 +36,8 @@ pub mod backend {
         async fn mkdir(&self, path: &str) -> Result<(), String>;
         async fn rename(&self, from: &str, to: &str) -> Result<(), String>;
         async fn remove(&self, path: &str) -> Result<(), String>;
-        async fn download_file(&self, remote: &str, local: &Path, cancel: &AtomicBool, prog: &mut (dyn FnMut(u64) + Send)) -> Result<(), String>;
-        async fn upload_file(&self, local: &Path, remote: &str, cancel: &AtomicBool, prog: &mut (dyn FnMut(u64) + Send)) -> Result<(), String>;
+        async fn download_file(&self, remote: &str, local: &Path, offset: u64, cancel: &AtomicBool, prog: &mut (dyn FnMut(u64) + Send)) -> Result<(), String>;
+        async fn upload_file(&self, local: &Path, remote: &str, offset: u64, cancel: &AtomicBool, prog: &mut (dyn FnMut(u64) + Send)) -> Result<(), String>;
     }
 }
 
@@ -51,7 +51,7 @@ use sftp::NameCodec;
 
 mod server {
     use std::path::{Path, PathBuf};
-    use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+    use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
     use tokio::net::{TcpListener, TcpStream};
 
     pub async fn run(root: PathBuf) -> u16 {
@@ -71,6 +71,7 @@ mod server {
         let mut ctrl = BufReader::new(sock);
         let mut cwd = PathBuf::from("/");
         let mut rnfr: Option<String> = None;
+        let mut rest: u64 = 0; // REST로 지정된 재시작 offset
         let _ = ctrl.get_mut().write_all(b"220 mini-ftp\r\n").await;
         // PASV 데이터 리스너 (다음 전송용)
         let mut pending_data: Option<TcpListener> = None;
@@ -135,24 +136,37 @@ mod server {
                         _ => { let _ = w.write_all(b"550 no\r\n").await; }
                     }
                 }
+                "REST" => {
+                    rest = arg.trim().parse().unwrap_or(0);
+                    let _ = w.write_all(b"350 rest ok\r\n").await;
+                }
                 "STOR" => {
                     let l = pending_data.take().unwrap();
                     let path = root_join(&root, &norm(&cwd, &arg));
+                    let off = std::mem::take(&mut rest);
                     let _ = w.write_all(b"150 send\r\n").await;
                     let (mut data, _) = l.accept().await.unwrap();
                     let mut buf = Vec::new();
                     let _ = data.read_to_end(&mut buf).await;
-                    let _ = tokio::fs::write(&path, &buf).await;
+                    // REST offset부터 이어 쓴다 (off=0이면 통째로 덮어씀)
+                    let mut f = tokio::fs::OpenOptions::new().create(true).write(true).open(&path).await.unwrap();
+                    if off == 0 {
+                        let _ = f.set_len(0).await;
+                    }
+                    f.seek(std::io::SeekFrom::Start(off)).await.unwrap();
+                    f.write_all(&buf).await.unwrap();
                     let _ = ctrl.get_mut().write_all(b"226 stored\r\n").await;
                 }
                 "RETR" => {
                     let l = pending_data.take().unwrap();
                     let path = root_join(&root, &norm(&cwd, &arg));
+                    let off = std::mem::take(&mut rest) as usize;
                     let data_v = tokio::fs::read(&path).await;
                     let _ = w.write_all(b"150 sending\r\n").await;
                     let (mut data, _) = l.accept().await.unwrap();
                     if let Ok(v) = data_v {
-                        let _ = data.write_all(&v).await;
+                        let start = off.min(v.len());
+                        let _ = data.write_all(&v[start..]).await;
                     }
                     let _ = data.shutdown().await;
                     drop(data);
@@ -223,7 +237,7 @@ async fn main() {
     std::fs::write(&src, &data).unwrap();
     let cancel = AtomicBool::new(false);
     let mut acc = 0u64;
-    c.upload_file(&src, "/up.bin", &cancel, &mut |d| acc += d).await.expect("upload");
+    c.upload_file(&src, "/up.bin", 0, &cancel, &mut |d| acc += d).await.expect("upload");
     assert_eq!(acc, data.len() as u64);
 
     // 목록
@@ -232,10 +246,39 @@ async fn main() {
 
     // 다운로드 해시 일치
     let dl: PathBuf = dir.join("dl.bin");
-    c.download_file("/up.bin", &dl, &cancel, &mut |_| {}).await.expect("download");
+    c.download_file("/up.bin", &dl, 0, &cancel, &mut |_| {}).await.expect("download");
     let h1 = { let mut h = Sha256::new(); h.update(&data); h.finalize() };
     let h2 = { let mut h = Sha256::new(); h.update(std::fs::read(&dl).unwrap()); h.finalize() };
     assert_eq!(h1, h2, "왕복 해시 불일치");
+
+    // ---- 이어받기 (REST) 검증 -------------------------------------------------
+    // 업로드 이어받기: 원격에 절반만 올라간 상태를 만들고 offset부터 재개.
+    let half = (data.len() / 2) as u64;
+    {
+        // 원격 /resume.bin 에 앞 절반만 기록 (중단 상태 모사)
+        let partial = dir.join("partial-src");
+        std::fs::write(&partial, &data[..half as usize]).unwrap();
+        c.upload_file(&partial, "/resume.bin", 0, &cancel, &mut |_| {}).await.expect("partial up");
+        assert_eq!(c.stat("/resume.bin", true).await.unwrap().size, Some(half), "부분 업로드 크기");
+        // 이어받기: half부터 끝까지
+        let mut up2 = 0u64;
+        c.upload_file(&src, "/resume.bin", half, &cancel, &mut |d| up2 += d).await.expect("resume up");
+        assert_eq!(up2, data.len() as u64 - half, "이어받은 바이트=나머지");
+        let back = dir.join("resume-up-back.bin");
+        c.download_file("/resume.bin", &back, 0, &cancel, &mut |_| {}).await.expect("verify dl");
+        let hb = { let mut h = Sha256::new(); h.update(std::fs::read(&back).unwrap()); h.finalize() };
+        assert_eq!(h1, hb, "업로드 이어받기 해시 불일치");
+    }
+    // 다운로드 이어받기: 로컬에 절반만 받은 상태에서 offset부터 재개.
+    {
+        let rdl = dir.join("resume-dl.bin");
+        std::fs::write(&rdl, &data[..half as usize]).unwrap(); // 받다 만 부분 파일 모사
+        let mut dn2 = 0u64;
+        c.download_file("/up.bin", &rdl, half, &cancel, &mut |d| dn2 += d).await.expect("resume dl");
+        assert_eq!(dn2, data.len() as u64 - half, "이어받은 바이트=나머지");
+        let hd = { let mut h = Sha256::new(); h.update(std::fs::read(&rdl).unwrap()); h.finalize() };
+        assert_eq!(h1, hd, "다운로드 이어받기 해시 불일치");
+    }
 
     // mkdir / rename / delete
     c.mkdir("/sub").await.expect("mkdir");
@@ -244,5 +287,5 @@ async fn main() {
     c.remove("/renamed.bin").await.expect("delete file");
     c.remove("/sub").await.expect("rmdir");
 
-    println!("PASS ftp_roundtrip: 로그인 + MLSD 목록 + 업/다운 해시 일치 + mkdir/rename/delete");
+    println!("PASS ftp_roundtrip: 로그인 + MLSD 목록 + 업/다운 해시 일치 + mkdir/rename/delete + REST 이어받기(업/다운)");
 }

@@ -28,12 +28,12 @@ async fn main() {
     std::fs::write(&tmp, "한글 내용\n").unwrap();
     let cancel = AtomicBool::new(false);
     let euc_file = format!("{base}/한글 보고서.txt");
-    browse.upload_file(&tmp, &euc_file, &cancel, &mut |_| {}).await.expect("euc upload");
+    browse.upload_file(&tmp, &euc_file, 0, &cancel, &mut |_| {}).await.expect("euc upload");
 
     // UTF-8 이름 파일도 하나 (혼재 상황)
     codec.euc.store(false, Ordering::Relaxed);
     let utf_file = format!("{base}/utf8-한글.txt");
-    browse.upload_file(&tmp, &utf_file, &cancel, &mut |_| {}).await.expect("utf8 upload");
+    browse.upload_file(&tmp, &utf_file, 0, &cancel, &mut |_| {}).await.expect("utf8 upload");
 
     // 2) 목록에서 둘 다 한글로 복원되는지
     let list = browse.list(&base).await.expect("list");
@@ -51,7 +51,7 @@ async fn main() {
     let xfer = open_sftp(&h, codec.clone()).await;
     let dl = std::env::temp_dir().join("idrop-e2e-euckr-dl.txt");
     let _ = std::fs::remove_file(&dl);
-    xfer.download_file(&euc_file, &dl, &cancel, &mut |_| {})
+    xfer.download_file(&euc_file, &dl, 0, &cancel, &mut |_| {})
         .await
         .expect("★ 공유 코덱 실패 — 다른 채널에서 EUC-KR 파일을 못 열었다");
     assert_eq!(std::fs::read(&dl).unwrap(), "한글 내용\n".as_bytes());

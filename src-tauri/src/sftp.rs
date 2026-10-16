@@ -495,18 +495,25 @@ impl Sftp {
     // ---- 전송 ----
 
     /// 원격 파일 하나를 로컬 파일로 받는다. `prog(받은 바이트 증가분)`
+    /// 원격 파일을 로컬로 받는다. offset>0이면 로컬 부분 파일 뒤에 이어받는다.
     pub async fn download_file(
         &self,
         remote: &str,
         local: &Path,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String> {
         let h = self.open(remote, FXF_READ).await?;
-        let res = self.download_handle(&h, local, cancel, prog).await;
+        let res = self.download_handle(&h, local, offset, cancel, prog).await;
         let _ = self.close(&h).await;
+        // 실패 시: 받은 게 있으면 부분 파일을 남겨 두고(이어받기용), 완전히 빈 파일만 정리한다.
         if res.is_err() {
-            let _ = tokio::fs::remove_file(local).await; // 받다 만 파일은 지운다
+            if let Ok(m) = tokio::fs::metadata(local).await {
+                if m.len() == 0 {
+                    let _ = tokio::fs::remove_file(local).await;
+                }
+            }
         }
         res
     }
@@ -515,13 +522,19 @@ impl Sftp {
         &self,
         h: &[u8],
         local: &Path,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String> {
-        let mut file = tokio::fs::File::create(local).await.map_err(|e| e.to_string())?;
+        // offset>0: 기존 부분 파일을 자르지 않고 연다. 0: 새로 만든다(덮어쓰기).
+        let mut file = if offset > 0 {
+            tokio::fs::OpenOptions::new().write(true).open(local).await.map_err(|e| e.to_string())?
+        } else {
+            tokio::fs::File::create(local).await.map_err(|e| e.to_string())?
+        };
         // (offset, 요청 길이, 응답 수신기)
         let mut q: VecDeque<(u64, u32, oneshot::Receiver<Resp>)> = VecDeque::new();
-        let mut next: u64 = 0;
+        let mut next: u64 = offset;
         let mut eof = false;
         let read_req = |off: u64, len: u32| -> Result<oneshot::Receiver<Resp>, String> {
             let mut p = Vec::new();
@@ -573,19 +586,25 @@ impl Sftp {
         Ok(())
     }
 
-    /// 로컬 파일 하나를 원격 경로로 올린다 (있으면 덮어씀).
+    /// 로컬 파일 하나를 원격 경로로 올린다. offset>0이면 원격 부분 파일 뒤에 이어 쓴다.
     pub async fn upload_file(
         &self,
         local: &Path,
         remote: &str,
+        offset: u64,
         cancel: &AtomicBool,
         prog: &mut (dyn FnMut(u64) + Send),
     ) -> Result<(), String> {
         let mut file = tokio::fs::File::open(local).await.map_err(|e| e.to_string())?;
-        let h = self.open(remote, FXF_WRITE | FXF_CREAT | FXF_TRUNC).await?;
+        // offset>0: 자르지 않고 열어(이어쓰기), 로컬도 그 지점으로 seek. 0: TRUNC(덮어쓰기).
+        let flags = if offset > 0 { FXF_WRITE | FXF_CREAT } else { FXF_WRITE | FXF_CREAT | FXF_TRUNC };
+        let h = self.open(remote, flags).await?;
+        if offset > 0 {
+            file.seek(std::io::SeekFrom::Start(offset)).await.map_err(|e| e.to_string())?;
+        }
         let res: Result<(), String> = async {
             let mut q: VecDeque<(u64, oneshot::Receiver<Resp>)> = VecDeque::new();
-            let mut off: u64 = 0;
+            let mut off: u64 = offset;
             let mut done = false;
             let mut buf = vec![0u8; CHUNK as usize];
             loop {
