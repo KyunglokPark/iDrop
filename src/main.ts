@@ -205,6 +205,15 @@ async function deleteIn(panel: Panel) {
   }
 }
 
+/** 원격 파일을 받아 기본 에디터로 열고, 저장하면 백엔드가 자동 재업로드한다. */
+async function editRemote(remotePath: string) {
+  try {
+    await invoke("remote_edit", { path: remotePath });
+  } catch (err) {
+    setStatus(String(err), true);
+  }
+}
+
 // F2 / Delete (포커스 패널 대상)
 document.addEventListener("keydown", (e) => {
   if (e.key === "F2") {
@@ -261,6 +270,14 @@ function panelMenu(panel: Panel, x: number, y: number, onRow: boolean) {
       label: isLocal ? t("menu.upload") : t("menu.download"),
       action: () => transfer(panel, [...panel.selected]),
     });
+    // 원격 파일(단일, 폴더 아님) → 편집: 받아서 기본 에디터로 열고 저장 시 자동 재업로드
+    if (!isLocal) {
+      const sel = panel.selectedEntries();
+      if (sel.length === 1 && !sel[0].isDir) {
+        const remotePath = panel.adapter.join(panel.path, sel[0].name);
+        items.push({ label: t("menu.edit"), action: () => void editRemote(remotePath) });
+      }
+    }
     items.push({ label: t("menu.rename"), action: () => void renameIn(panel) });
     items.push({ label: t("menu.delete"), action: () => void deleteIn(panel) });
   }
@@ -404,6 +421,19 @@ await listen<{ state: string; host: string; home?: string; error?: string }>(
     }
   }
 );
+
+// ---- 원격 편집 상태 (받아서 열기 / 저장 시 자동 업로드) ----
+await listen<{ state: string; name: string; error?: string }>("edit-state", (e) => {
+  const p = e.payload;
+  if (p.state === "opened") {
+    setStatus(t("edit.opened", { name: p.name }));
+  } else if (p.state === "saved") {
+    setStatus(t("edit.saved", { name: p.name }));
+    if (connected) void remotePanel.refresh().catch(() => {});
+  } else if (p.state === "error") {
+    setStatus(t("edit.error", { name: p.name, error: p.error || "" }), true);
+  }
+});
 
 // ---- 시작 ---------------------------------------------------------------------
 

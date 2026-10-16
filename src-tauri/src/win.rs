@@ -272,6 +272,47 @@ mod imp {
         let end = path.iter().position(|&c| c == 0).unwrap_or(path.len());
         Some(String::from_utf16_lossy(&path[..end]))
     }
+
+    #[link(name = "shell32")]
+    extern "system" {
+        fn ShellExecuteW(
+            hwnd: *mut c_void,
+            operation: *const u16,
+            file: *const u16,
+            parameters: *const u16,
+            directory: *const u16,
+            show_cmd: i32,
+        ) -> isize;
+    }
+
+    /// 파일을 OS 기본 연결 프로그램으로 연다 (ShellExecute "open").
+    /// 연결 프로그램이 없으면 메모장으로 대체한다.
+    pub fn shell_open(path: &str) -> Result<(), String> {
+        fn wide(s: &str) -> Vec<u16> {
+            s.encode_utf16().chain(std::iter::once(0)).collect()
+        }
+        const SW_SHOWNORMAL: i32 = 1;
+        const SE_ERR_NOASSOC: isize = 31; // 연결된 프로그램 없음
+        let file_w = wide(path);
+        let open_w = wide("open");
+        let r = unsafe {
+            ShellExecuteW(null_mut(), open_w.as_ptr(), file_w.as_ptr(), null(), null(), SW_SHOWNORMAL)
+        };
+        if r > 32 {
+            return Ok(());
+        }
+        // 연결 프로그램이 없으면 메모장으로 연다
+        if r == SE_ERR_NOASSOC {
+            let notepad_w = wide("notepad.exe");
+            let r2 = unsafe {
+                ShellExecuteW(null_mut(), open_w.as_ptr(), notepad_w.as_ptr(), file_w.as_ptr(), null(), SW_SHOWNORMAL)
+            };
+            if r2 > 32 {
+                return Ok(());
+            }
+        }
+        Err(format!("파일을 열 수 없습니다 (ShellExecute 코드 {r})"))
+    }
 }
 
 #[cfg(not(any(windows, idot_check)))]
@@ -293,9 +334,15 @@ mod imp {
     }
     pub fn allow_foreground() {}
     pub fn restore_owner(_o: isize) {}
+    pub fn shell_open(_path: &str) -> Result<(), String> {
+        Err("unsupported".into())
+    }
 }
 
-pub use imp::{allow_foreground, on_sta_thread, pick_files, pick_folder, protect, restore_owner, unprotect};
+pub use imp::{
+    allow_foreground, on_sta_thread, pick_files, pick_folder, protect, restore_owner, shell_open,
+    unprotect,
+};
 
 use base64::Engine as _;
 

@@ -65,9 +65,14 @@ const STRINGS: Record<string, { ko: string; en: string }> = {
   // ---- 우클릭 메뉴 ----
   "menu.upload": { ko: "업로드", en: "Upload" },
   "menu.download": { ko: "다운로드", en: "Download" },
+  "menu.edit": { ko: "편집", en: "Edit" },
   "menu.rename": { ko: "이름 바꾸기", en: "Rename" },
   "menu.delete": { ko: "삭제", en: "Delete" },
   "menu.refresh": { ko: "새로 고침", en: "Refresh" },
+  // ---- 원격 편집 상태 ----
+  "edit.opened": { ko: "편집 중: {name} (저장하면 자동 업로드)", en: "Editing: {name} (saves upload automatically)" },
+  "edit.saved": { ko: "업로드됨: {name}", en: "Uploaded: {name}" },
+  "edit.error": { ko: "편집 업로드 실패: {name} — {error}", en: "Edit upload failed: {name} — {error}" },
   // ---- 전송 큐 ----
   "queue.title": { ko: "전송 큐", en: "Transfer queue" },
   "queue.cancel": { ko: "선택 취소", en: "Cancel selected" },

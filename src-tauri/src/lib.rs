@@ -14,6 +14,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 mod backend;
 mod connect;
+mod edit;
 mod ftp;
 mod hostkey;
 mod import;
@@ -302,6 +303,13 @@ async fn remote_remove(state: State<'_, AppState>, paths: Vec<String>) -> Result
     Ok(())
 }
 
+/// 원격 파일을 임시 폴더로 받아 기본 에디터로 열고, 저장되면 자동 재업로드한다.
+#[tauri::command]
+async fn remote_edit(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let site = site_get(&state).await?;
+    edit::start(app, site, path).await
+}
+
 // ---- 전송 큐 명령 --------------------------------------------------------------
 
 /// 전송 요청: dir="upload"면 로컬 sources → 원격 destDir, "download"면 그 반대.
@@ -478,6 +486,7 @@ pub fn run() {
             remote_mkdir,
             remote_rename,
             remote_remove,
+            remote_edit,
             localfs::local_drives,
             localfs::local_home,
             localfs::local_list,
