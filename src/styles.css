@@ -119,17 +119,33 @@ body {
   min-height: 0;
 }
 
+/* 좌측 패널은 flex-basis(--left-w)로 폭을 정하고, 우측이 나머지를 채운다 */
+#panel-local {
+  flex: 0 0 var(--left-w, 50%);
+  min-width: 120px;
+}
+
+#panel-remote {
+  flex: 1 1 0;
+  min-width: 120px;
+}
+
 .panel {
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-width: 0;
 }
 
 #panel-divider {
-  width: 4px;
+  width: 5px;
+  flex: 0 0 auto;
   background: var(--bar);
   cursor: col-resize;
+}
+
+#panel-divider:hover,
+#queue-divider:hover {
+  background: var(--accent);
 }
 
 .panel-head {
@@ -195,13 +211,14 @@ body {
 
 /* ---- 전송 큐 ---- */
 #queue-divider {
-  height: 4px;
+  height: 5px;
+  flex: 0 0 auto;
   background: var(--bar);
   cursor: row-resize;
 }
 
 #queue {
-  height: 180px;
+  flex: 0 0 var(--queue-h, 180px);
   display: flex;
   flex-direction: column;
   min-height: 60px;

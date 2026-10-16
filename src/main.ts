@@ -401,5 +401,69 @@ if (home) {
   for (const o of drivesSel.options) if (o.value.toUpperCase() === drive.toUpperCase()) o.selected = true;
 }
 
+// ---- 패널/큐 크기 조정 (디바이더 드래그) -------------------------------------
+
+const app = document.getElementById("app") as HTMLElement;
+const panelsEl = document.getElementById("panels") as HTMLElement;
+const panelDivider = document.getElementById("panel-divider") as HTMLElement;
+const queueDivider = document.getElementById("queue-divider") as HTMLElement;
+
+// 저장된 크기 복원
+const LEFT_W_KEY = "idrop.leftWidth"; // 좌측 패널 폭 비율 (0~1)
+const QUEUE_H_KEY = "idrop.queueHeight"; // 전송 큐 높이 (px)
+{
+  const lw = parseFloat(localStorage.getItem(LEFT_W_KEY) ?? "");
+  if (Number.isFinite(lw) && lw > 0.1 && lw < 0.9) {
+    app.style.setProperty("--left-w", `${lw * 100}%`);
+  }
+  const qh = parseFloat(localStorage.getItem(QUEUE_H_KEY) ?? "");
+  if (Number.isFinite(qh) && qh >= 60) {
+    app.style.setProperty("--queue-h", `${qh}px`);
+  }
+}
+
+// 좌우 패널 분할: 드래그로 좌측 폭을 바꾼다
+panelDivider.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  panelDivider.setPointerCapture(e.pointerId);
+  document.body.style.cursor = "col-resize";
+  const onMove = (mv: PointerEvent) => {
+    const r = panelsEl.getBoundingClientRect();
+    const ratio = Math.min(0.85, Math.max(0.15, (mv.clientX - r.left) / r.width));
+    app.style.setProperty("--left-w", `${ratio * 100}%`);
+  };
+  const onUp = () => {
+    panelDivider.removeEventListener("pointermove", onMove);
+    panelDivider.removeEventListener("pointerup", onUp);
+    document.body.style.cursor = "";
+    const r = panelsEl.getBoundingClientRect();
+    const left = document.getElementById("panel-local")!.getBoundingClientRect().width;
+    localStorage.setItem(LEFT_W_KEY, String(left / r.width));
+  };
+  panelDivider.addEventListener("pointermove", onMove);
+  panelDivider.addEventListener("pointerup", onUp);
+});
+
+// 전송 큐 높이: 드래그로 큐 높이를 바꾼다 (위로 끌면 커짐)
+queueDivider.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  queueDivider.setPointerCapture(e.pointerId);
+  document.body.style.cursor = "row-resize";
+  const onMove = (mv: PointerEvent) => {
+    const appR = app.getBoundingClientRect();
+    const h = Math.min(appR.height - 160, Math.max(60, appR.bottom - mv.clientY - 3));
+    app.style.setProperty("--queue-h", `${h}px`);
+  };
+  const onUp = () => {
+    queueDivider.removeEventListener("pointermove", onMove);
+    queueDivider.removeEventListener("pointerup", onUp);
+    document.body.style.cursor = "";
+    const h = document.getElementById("queue")!.getBoundingClientRect().height;
+    localStorage.setItem(QUEUE_H_KEY, String(Math.round(h)));
+  };
+  queueDivider.addEventListener("pointermove", onMove);
+  queueDivider.addEventListener("pointerup", onUp);
+});
+
 // 최초 기동: 사이트 관리자를 띄워 바로 접속을 고를 수 있게 한다
 if (sitesCtl.hasSites()) sitesCtl.open();
