@@ -13,7 +13,7 @@ import {
   remoteAdapterPaths,
 } from "./panel";
 import { initQueue } from "./queue";
-import { initSites, Site } from "./sites";
+import { initSites, recordVisited, Site } from "./sites";
 
 applyI18n();
 void invoke("set_lang", { lang: getLang() }).catch(() => {});
@@ -275,7 +275,10 @@ remotePanel.onContext = (x, y, onRow) => {
 
 // ---- 접속 (퀵커넥트 / 사이트) -------------------------------------------------
 
-async function connect(hop: {
+// 지금 접속된 사이트 id (퀵커넥트는 null) — 방문 위치 기억 대상
+let activeSiteId: string | null = null;
+
+async function connect(opts: {
   host: string;
   port: number;
   username: string;
@@ -283,22 +286,31 @@ async function connect(hop: {
   keyFile: string;
   useAgent: boolean;
   encoding: "auto" | "utf-8" | "euc-kr";
-  initialRemoteDir?: string;
+  siteId?: string | null;
+  remoteDir?: string; // 기억된/초기 원격 경로 (없으면 홈)
+  localDir?: string; // 기억된 로컬 경로 (없으면 현재 유지)
 }) {
   qcBtn.disabled = true;
+  activeSiteId = opts.siteId ?? null;
   try {
     const home = await invoke<string>("site_connect", {
       hop: {
-        host: hop.host,
-        port: hop.port,
-        username: hop.username,
-        password: hop.password,
-        keyFile: hop.keyFile,
-        useAgent: hop.useAgent,
+        host: opts.host,
+        port: opts.port,
+        username: opts.username,
+        password: opts.password,
+        keyFile: opts.keyFile,
+        useAgent: opts.useAgent,
       },
-      encoding: hop.encoding,
+      encoding: opts.encoding,
     });
-    await remotePanel.navigate(hop.initialRemoteDir || home);
+    // 로컬·원격을 한 번에 기억된 위치로 이동 (원격 실패 시 홈으로 폴백)
+    if (opts.localDir) await localPanel.navigate(opts.localDir).catch(() => {});
+    try {
+      await remotePanel.navigate(opts.remoteDir || home);
+    } catch {
+      await remotePanel.navigate(home).catch(() => {});
+    }
   } catch (err) {
     setStatus(String(err));
   } finally {
@@ -324,10 +336,11 @@ async function quickConnect() {
     keyFile: "",
     useAgent: false,
     encoding: "auto",
+    siteId: null,
   });
 }
 
-await initSites((s: Site) => {
+const sitesCtl = await initSites((s: Site) => {
   void connect({
     host: s.host,
     port: s.port,
@@ -336,9 +349,19 @@ await initSites((s: Site) => {
     keyFile: s.keyFile,
     useAgent: s.useAgent,
     encoding: s.nameEncoding,
-    initialRemoteDir: s.initialRemoteDir,
+    siteId: s.id,
+    remoteDir: s.lastRemoteDir || s.initialRemoteDir || undefined,
+    localDir: s.lastLocalDir || undefined,
   });
 });
+
+// 접속된 사이트가 있으면 패널 이동 시마다 마지막 위치를 기억한다
+localPanel.onNavigated = (path) => {
+  if (activeSiteId) recordVisited(activeSiteId, "local", path);
+};
+remotePanel.onNavigated = (path) => {
+  if (connected && activeSiteId) recordVisited(activeSiteId, "remote", path);
+};
 
 qcBtn.addEventListener("click", () => void quickConnect());
 for (const el of [qcHost, qcPort, qcUser, qcPass]) {
@@ -361,6 +384,7 @@ await listen<{ state: string; host: string; home?: string; error?: string }>(
       setStatus(t("status.connected", { host: p.host }));
     } else {
       connected = false;
+      activeSiteId = null;
       qcBtn.textContent = t("top.connect");
       setStatus(p.error ? p.error : t("status.disconnected"));
     }
@@ -376,3 +400,6 @@ if (home) {
   const drive = home.slice(0, 3);
   for (const o of drivesSel.options) if (o.value.toUpperCase() === drive.toUpperCase()) o.selected = true;
 }
+
+// 최초 기동: 사이트 관리자를 띄워 바로 접속을 고를 수 있게 한다
+if (sitesCtl.hasSites()) sitesCtl.open();

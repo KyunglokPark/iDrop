@@ -21,6 +21,10 @@ export interface Site {
   useAgent: boolean;
   nameEncoding: "auto" | "utf-8" | "euc-kr";
   initialRemoteDir: string;
+  /** 마지막으로 머문 원격 경로 (접속 시 여기로 이동) */
+  lastRemoteDir?: string;
+  /** 마지막으로 머문 로컬 경로 (접속 시 여기로 이동) */
+  lastLocalDir?: string;
 }
 
 const STORE_KEY = "idrop.sites";
@@ -59,7 +63,21 @@ function normalize(x: unknown): Site | null {
     nameEncoding:
       o.nameEncoding === "utf-8" || o.nameEncoding === "euc-kr" ? o.nameEncoding : "auto",
     initialRemoteDir: typeof o.initialRemoteDir === "string" ? o.initialRemoteDir : "",
+    lastRemoteDir: typeof o.lastRemoteDir === "string" ? o.lastRemoteDir : undefined,
+    lastLocalDir: typeof o.lastLocalDir === "string" ? o.lastLocalDir : undefined,
   };
+}
+
+// 모듈 전역 저장 콜백 — recordVisited가 initSites 밖에서도 save를 호출할 수 있게.
+let persist: () => void = () => {};
+
+/** 접속 중 패널을 이동할 때마다 사이트의 마지막 위치를 기록한다 (연결된 사이트에 한함). */
+export function recordVisited(siteId: string, which: "local" | "remote", path: string) {
+  const s = sites.find((x) => x.id === siteId);
+  if (!s) return;
+  if (which === "local") s.lastLocalDir = path;
+  else s.lastRemoteDir = path;
+  persist();
 }
 
 function loadAll() {
@@ -136,9 +154,10 @@ async function revealPasswords() {
 
 // ---- 초기화 -------------------------------------------------------------------
 
-export async function initSites(onConnect: (s: Site) => void) {
+export async function initSites(onConnect: (s: Site) => void): Promise<{ open: () => void; hasSites: () => boolean }> {
   loadAll();
   await revealPasswords();
+  persist = save; // recordVisited가 호출할 저장 함수 연결
 
   const modal = document.getElementById("sites-modal") as HTMLElement;
   const listEl = document.getElementById("sites-list") as HTMLElement;
@@ -734,4 +753,6 @@ export async function initSites(onConnect: (s: Site) => void) {
   });
 
   loadForm(null);
+
+  return { open, hasSites: () => sites.length > 0 };
 }
