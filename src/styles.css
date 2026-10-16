@@ -50,11 +50,13 @@ body {
 /* ---- 상단바 ---- */
 #topbar {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
   background: var(--bar);
   border-bottom: 1px solid #00000040;
+  overflow: hidden;
 }
 
 #logo {
@@ -114,10 +116,28 @@ body {
   background: var(--btn-hi);
 }
 
+/* ---- 하단 상태바 (연결/에러 메시지) ---- */
+#statusbar {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  background: var(--bar);
+  border-top: 1px solid #00000040;
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+}
+
 #status {
-  margin-left: auto;
   color: var(--muted);
-  padding-right: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 에러 메시지는 눈에 띄게 */
+#status.error {
+  color: var(--err, #ff6b6b);
 }
 
 /* ---- 듀얼 패널 ---- */

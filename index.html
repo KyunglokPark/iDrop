@@ -20,7 +20,6 @@
         <input id="qc-user" type="text" data-i18n-placeholder="top.user" spellcheck="false" />
         <input id="qc-pass" type="password" data-i18n-placeholder="top.pass" />
         <button id="qc-connect" type="button" data-i18n="top.connect">빠른 연결</button>
-        <span id="status"></span>
       </header>
 
       <!-- 듀얼 패널 -->
@@ -62,6 +61,9 @@
         </div>
         <div id="queue-body"></div>
       </section>
+
+      <!-- 상태바: 연결/에러 메시지 -->
+      <footer id="statusbar"><span id="status"></span></footer>
     </div>
     <!-- 사이트 관리자 -->
     <div id="sites-modal" class="hidden">

@@ -26,8 +26,10 @@ const qcUser = document.getElementById("qc-user") as HTMLInputElement;
 const qcPass = document.getElementById("qc-pass") as HTMLInputElement;
 const qcBtn = document.getElementById("qc-connect") as HTMLButtonElement;
 
-export function setStatus(msg: string) {
+export function setStatus(msg: string, isError = false) {
   statusEl.textContent = msg;
+  statusEl.classList.toggle("error", isError);
+  statusEl.title = msg; // 길면 말줄임되니 전체 메시지는 툴팁으로
 }
 
 let connected = false;
@@ -117,7 +119,7 @@ void getCurrentWebview().onDragDropEvent((e) => {
     dir: "upload",
     sources: e.payload.paths,
     destDir: remotePanel.path,
-  }).catch((err) => setStatus(String(err)));
+  }).catch((err) => setStatus(String(err), true));
 });
 
 // 어느 패널이 포커스인지 (F2/Delete/새 폴더 대상)
@@ -168,7 +170,7 @@ async function mkdirIn(panel: Panel) {
     await panel.adapter.mkdir(panel.adapter.join(panel.path, name.trim()));
     await panel.refresh();
   } catch (err) {
-    setStatus(String(err));
+    setStatus(String(err), true);
   }
 }
 
@@ -185,7 +187,7 @@ async function renameIn(panel: Panel) {
     );
     await panel.refresh();
   } catch (err) {
-    setStatus(String(err));
+    setStatus(String(err), true);
   }
 }
 
@@ -199,7 +201,7 @@ async function deleteIn(panel: Panel) {
     await panel.adapter.remove(paths);
     await panel.refresh();
   } catch (err) {
-    setStatus(String(err));
+    setStatus(String(err), true);
   }
 }
 
@@ -314,7 +316,7 @@ async function connect(opts: {
       await remotePanel.navigate(home).catch(() => {});
     }
   } catch (err) {
-    setStatus(String(err));
+    setStatus(String(err), true);
   } finally {
     qcBtn.disabled = false;
   }
@@ -398,7 +400,7 @@ await listen<{ state: string; host: string; home?: string; error?: string }>(
       connected = false;
       activeSiteId = null;
       qcBtn.textContent = t("top.connect");
-      setStatus(p.error ? p.error : t("status.disconnected"));
+      setStatus(p.error ? p.error : t("status.disconnected"), !!p.error);
     }
   }
 );
