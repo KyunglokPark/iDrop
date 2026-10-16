@@ -13,3 +13,4 @@ encoding_rs = "0.8"
 serde = { version = "1", features = ["derive"] }
 rand = { version = "0.10", features = ["thread_rng"] }
 sha2 = "0.11.0-rc.3"
+async-trait = "0.1"

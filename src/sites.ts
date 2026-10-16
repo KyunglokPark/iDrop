@@ -13,6 +13,7 @@ export interface Site {
   id: string;
   name: string;
   group: string;
+  protocol: "sftp" | "ftp";
   host: string;
   port: number;
   username: string;
@@ -54,6 +55,7 @@ function normalize(x: unknown): Site | null {
     id: typeof o.id === "string" ? o.id : genId(),
     name: typeof o.name === "string" && o.name ? o.name : o.host,
     group: typeof o.group === "string" ? o.group : "",
+    protocol: o.protocol === "ftp" ? "ftp" : "sftp",
     host: o.host,
     port: typeof o.port === "number" ? o.port : parseInt(String(o.port), 10) || 22,
     username: typeof o.username === "string" ? o.username : "",
@@ -177,6 +179,7 @@ export async function initSites(onConnect: (s: Site) => void): Promise<{ open: (
   const f = {
     name: document.getElementById("sf-name") as HTMLInputElement,
     group: document.getElementById("sf-group") as HTMLInputElement,
+    proto: document.getElementById("sf-proto") as HTMLSelectElement,
     host: document.getElementById("sf-host") as HTMLInputElement,
     port: document.getElementById("sf-port") as HTMLInputElement,
     user: document.getElementById("sf-user") as HTMLInputElement,
@@ -184,12 +187,19 @@ export async function initSites(onConnect: (s: Site) => void): Promise<{ open: (
     enc: document.getElementById("sf-enc") as HTMLSelectElement,
   };
 
+  // 프로토콜 바꾸면 기본 포트가 그 프로토콜 기본값이면 자동 전환
+  f.proto.addEventListener("change", () => {
+    const cur = parseInt(f.port.value, 10);
+    if (cur === 22 || cur === 21 || !cur) f.port.value = f.proto.value === "ftp" ? "21" : "22";
+  });
+
   function loadForm(s: Site | null) {
     selectedId = s?.id ?? null;
     f.name.value = s?.name ?? "";
     f.group.value = s?.group ?? selectedGroup ?? "";
+    f.proto.value = s?.protocol ?? "sftp";
     f.host.value = s?.host ?? "";
-    f.port.value = String(s?.port ?? 22);
+    f.port.value = String(s?.port ?? (s?.protocol === "ftp" ? 21 : 22));
     f.user.value = s?.username ?? "";
     f.pass.value = s?.password ?? "";
     f.enc.value = s?.nameEncoding ?? "auto";
@@ -228,12 +238,14 @@ export async function initSites(onConnect: (s: Site) => void): Promise<{ open: (
       return null;
     }
     const existing = selectedId ? sites.find((s) => s.id === selectedId) : undefined;
+    const protocol = f.proto.value === "ftp" ? "ftp" : "sftp";
     return {
       id: existing?.id ?? genId(),
       name: f.name.value.trim() || host,
       group: f.group.value.trim(),
+      protocol,
       host,
-      port: parseInt(f.port.value, 10) || 22,
+      port: parseInt(f.port.value, 10) || (protocol === "ftp" ? 21 : 22),
       username: f.user.value.trim(),
       password: f.pass.value,
       keyFile: existing?.keyFile ?? "",
@@ -527,7 +539,7 @@ export async function initSites(onConnect: (s: Site) => void): Promise<{ open: (
 
     const sub = document.createElement("span");
     sub.className = "s-sub";
-    sub.textContent = `sftp  ${s.username ? s.username + "@" : ""}${s.host}:${s.port}`;
+    sub.textContent = `${s.protocol}  ${s.username ? s.username + "@" : ""}${s.host}:${s.port}`;
 
     const cc = document.createElement("button");
     cc.className = "conn-copy";
@@ -683,6 +695,7 @@ export async function initSites(onConnect: (s: Site) => void): Promise<{ open: (
         id: genId(),
         name: c.name || c.host,
         group: c.group || "",
+        protocol: "sftp", // 가져온 세션(iDOT/Xshell/PuTTY)은 모두 SSH 계열
         host: c.host,
         port: c.port || 22,
         username: c.username,

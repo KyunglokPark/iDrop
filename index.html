@@ -11,6 +11,10 @@
       <header id="topbar">
         <img id="logo" src="/iDrop_CI.png" alt="iDrop" />
         <button id="sites-open" type="button" data-i18n="top.sites">사이트</button>
+        <select id="qc-proto">
+          <option value="sftp">SFTP</option>
+          <option value="ftp">FTP</option>
+        </select>
         <input id="qc-host" type="text" data-i18n-placeholder="top.host" spellcheck="false" />
         <input id="qc-port" type="text" value="22" data-i18n-placeholder="top.port" spellcheck="false" />
         <input id="qc-user" type="text" data-i18n-placeholder="top.user" spellcheck="false" />
@@ -83,6 +87,11 @@
             <input id="sf-name" type="text" spellcheck="false" />
             <label data-i18n="sites.group">그룹</label>
             <input id="sf-group" type="text" spellcheck="false" />
+            <label data-i18n="sites.protocol">프로토콜</label>
+            <select id="sf-proto">
+              <option value="sftp">SFTP</option>
+              <option value="ftp">FTP</option>
+            </select>
             <label data-i18n="top.host">호스트</label>
             <input id="sf-host" type="text" spellcheck="false" />
             <label data-i18n="top.port">포트</label>

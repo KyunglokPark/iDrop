@@ -12,7 +12,9 @@ use std::sync::{Arc, Mutex};
 
 use tauri::{AppHandle, Emitter, Manager, State};
 
+mod backend;
 mod connect;
+mod ftp;
 mod hostkey;
 mod import;
 mod localfs;
@@ -184,23 +186,38 @@ async fn site_connect(
     state: State<'_, AppState>,
     hop: connect::Hop,
     encoding: String,
+    protocol: Option<String>,
 ) -> Result<String, String> {
     // 이전 연결 정리
     state.site.lock().await.take();
     emit_site(&app, "connecting", &hop.host, None, None);
+    let is_ftp = protocol.as_deref() == Some("ftp");
 
     let r: Result<(Arc<SitePool>, String), String> = async {
-        let (handle, _user) = connect::connect_and_auth(&app, "site", &hop).await?;
-        let site = SitePool::new(handle, hop.host.clone());
-        match encoding.as_str() {
-            "euc-kr" => site.codec.euc.store(true, Ordering::Relaxed),
-            "utf-8" => site.codec.euc.store(false, Ordering::Relaxed),
-            _ => {
-                if let Some(euc) = connect::server_charset_is_euc(&site.handle).await {
-                    site.codec.euc.store(euc, Ordering::Relaxed);
+        let site = if is_ftp {
+            // FTP: SSH 인증 없이 제어연결로 바로 로그인
+            let site = SitePool::new_ftp(hop.host.clone(), hop.port, hop.username.clone(), hop.password.clone());
+            match encoding.as_str() {
+                "euc-kr" => site.codec.euc.store(true, Ordering::Relaxed),
+                _ => site.codec.euc.store(false, Ordering::Relaxed), // FTP는 기본 UTF-8 (auto 미지원)
+            }
+            site
+        } else {
+            let (handle, _user) = connect::connect_and_auth(&app, "site", &hop).await?;
+            let site = SitePool::new_sftp(handle, hop.host.clone());
+            match encoding.as_str() {
+                "euc-kr" => site.codec.euc.store(true, Ordering::Relaxed),
+                "utf-8" => site.codec.euc.store(false, Ordering::Relaxed),
+                _ => {
+                    if let Some(h) = site.ssh_handle() {
+                        if let Some(euc) = connect::server_charset_is_euc(h).await {
+                            site.codec.euc.store(euc, Ordering::Relaxed);
+                        }
+                    }
                 }
             }
-        }
+            site
+        };
         let home = site.browse().await?.realpath(".").await?;
         Ok((site, home))
     }

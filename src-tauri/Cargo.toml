@@ -24,6 +24,8 @@ tokio = { version = "1", features = ["sync", "macros", "time", "net", "io-util",
 encoding_rs = "0.8"
 # 저장 비밀번호(DPAPI 암호문)를 문자열로 보관
 base64 = "0.22"
+# SFTP/FTP 백엔드를 공통 트레잇(dyn)으로 다루기 위한 async 메서드 지원
+async-trait = "0.1"
 
 # 리눅스에서 Windows 코드를 타입 검사할 때 쓰는 cfg (win.rs) — 경고 없이 허용
 [lints.rust]

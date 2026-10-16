@@ -279,6 +279,7 @@ remotePanel.onContext = (x, y, onRow) => {
 let activeSiteId: string | null = null;
 
 async function connect(opts: {
+  protocol: "sftp" | "ftp";
   host: string;
   port: number;
   username: string;
@@ -303,6 +304,7 @@ async function connect(opts: {
         useAgent: opts.useAgent,
       },
       encoding: opts.encoding,
+      protocol: opts.protocol,
     });
     // 로컬·원격을 한 번에 기억된 위치로 이동 (원격 실패 시 홈으로 폴백)
     if (opts.localDir) await localPanel.navigate(opts.localDir).catch(() => {});
@@ -328,9 +330,11 @@ async function quickConnect() {
     qcHost.focus();
     return;
   }
+  const proto = (document.getElementById("qc-proto") as HTMLSelectElement).value === "ftp" ? "ftp" : "sftp";
   await connect({
+    protocol: proto,
     host,
-    port: parseInt(qcPort.value, 10) || 22,
+    port: parseInt(qcPort.value, 10) || (proto === "ftp" ? 21 : 22),
     username: qcUser.value.trim(),
     password: qcPass.value,
     keyFile: "",
@@ -340,8 +344,16 @@ async function quickConnect() {
   });
 }
 
+// 퀵커넥트 프로토콜 바꾸면 기본 포트 자동 전환
+const qcProto = document.getElementById("qc-proto") as HTMLSelectElement;
+qcProto.addEventListener("change", () => {
+  const cur = parseInt(qcPort.value, 10);
+  if (cur === 22 || cur === 21 || !cur) qcPort.value = qcProto.value === "ftp" ? "21" : "22";
+});
+
 const sitesCtl = await initSites((s: Site) => {
   void connect({
+    protocol: s.protocol,
     host: s.host,
     port: s.port,
     username: s.username,

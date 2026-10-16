@@ -115,6 +115,7 @@ const STRINGS: Record<string, { ko: string; en: string }> = {
   "sites.import": { ko: "가져오기", en: "Import" },
   "sites.name": { ko: "이름", en: "Name" },
   "sites.group": { ko: "그룹", en: "Group" },
+  "sites.protocol": { ko: "프로토콜", en: "Protocol" },
   "sites.enc": { ko: "파일명 인코딩", en: "Filename encoding" },
   "sites.save": { ko: "저장", en: "Save" },
   "sites.connect": { ko: "접속", en: "Connect" },
