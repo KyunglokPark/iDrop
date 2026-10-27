@@ -1,0 +1,181 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>iDrop 소개서</title>
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Malgun Gothic","Apple SD Gothic Neo","Segoe UI",sans-serif; color: #15293b; }
+.slide { position: relative; width: 1280px; height: 720px; overflow: hidden;
+         page-break-after: always; background: #fff; padding: 64px 72px; }
+.slide:last-child { page-break-after: auto; }
+
+/* 어두운 슬라이드 (표지/마감) */
+.dark { background: #0f2234; color: #eaf1f7; }
+.dark .h1 { color: #ffffff; }
+.dark .sub { color: #9fb6c9; }
+.dark .foot { color: #7d93a6; }
+
+.logo-wrap { margin-bottom: 40px; }
+.logo-plate { display: inline-flex; align-items: center; gap: 16px;
+              background: #ffffff; border-radius: 16px; padding: 18px 26px; }
+.logo-plate img { height: 72px; width: auto; display: block; }
+.logo-plate .wm { font-size: 46px; font-weight: 800; color: #0e3f63; letter-spacing: 1px; }
+.logo-dark img { height: 84px; }
+
+.h1 { font-size: 64px; font-weight: 800; line-height: 1.12; color: #16436a; }
+.sub { font-size: 26px; color: #4f6475; margin-top: 22px; font-weight: 500; }
+.foot { font-size: 20px; color: #6b7d8c; margin-top: 96px; }
+.title-foot { position: absolute; left: 72px; bottom: 72px; }
+
+/* 콘텐츠 헤딩 */
+.h2 { font-size: 48px; font-weight: 800; color: #16548a; margin-bottom: 40px; }
+
+/* 스탯 카드 행 */
+.stats { display: flex; gap: 20px; }
+.stat { flex: 1; background: #eef2f6; border-radius: 14px; padding: 28px 22px; }
+.stat .big { font-size: 52px; font-weight: 800; color: #16548a; line-height: 1; }
+.stat .lbl { font-size: 21px; font-weight: 700; margin-top: 16px; color: #1a2e3f; }
+.stat .dsc { font-size: 17px; color: #5f6f7c; margin-top: 10px; line-height: 1.4; }
+.note { font-size: 21px; color: #41576a; line-height: 1.5; margin-top: 40px; }
+
+/* 2단 비교 */
+.cols { display: flex; align-items: stretch; gap: 26px; }
+.col { flex: 1; border-radius: 16px; padding: 34px 32px; }
+.col.light { background: #eef2f6; }
+.col.fill { background: #0e3f63; color: #e9f1f8; }
+.col .ct { font-size: 28px; font-weight: 800; margin-bottom: 18px; display: flex; align-items: center; gap: 14px; }
+.col.light .ct { color: #16436a; }
+.badge { width: 46px; height: 46px; border-radius: 50%; display: inline-flex; align-items: center;
+         justify-content: center; font-size: 24px; color: #fff; flex: 0 0 auto; }
+.badge.warn { background: #c0392b; }
+.badge.ok { background: #f5a623; }
+.col .cb { font-size: 20px; line-height: 1.55; }
+.col.fill .cb { color: #d4e3ef; }
+.flow { font-size: 22px; font-weight: 700; color: #16548a; margin-top: 34px; }
+
+/* 기능 그리드 */
+.grid { display: grid; gap: 20px; }
+.grid.c3 { grid-template-columns: repeat(3,1fr); }
+.grid.c2 { grid-template-columns: repeat(2,1fr); }
+.fcard { background: #eef2f6; border-radius: 14px; padding: 24px 22px; }
+.fhead { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.icon { width: 44px; height: 44px; border-radius: 50%; background: #0e4f7c; color: #fff;
+        display: inline-flex; align-items: center; justify-content: center; font-size: 22px; flex: 0 0 auto; }
+.ftitle { font-size: 22px; font-weight: 800; color: #17334a; }
+.fdesc { font-size: 17.5px; color: #5f6f7c; line-height: 1.45; }
+
+/* 리스트 행 (아이콘 + 제목 + 설명) */
+.rows { display: flex; flex-direction: column; gap: 14px; }
+.row { background: #eef2f6; border-radius: 12px; padding: 18px 24px; display: flex; align-items: center; gap: 20px; }
+.row .icon { width: 46px; height: 46px; font-size: 22px; }
+.row .rt { font-size: 22px; font-weight: 800; color: #17334a; width: 220px; flex: 0 0 auto; }
+.row .rd { font-size: 19px; color: #51626f; }
+
+/* 단계 (번호 원) */
+.steps { display: flex; flex-direction: column; gap: 18px; }
+.step { display: flex; align-items: center; gap: 18px; }
+.snum { width: 44px; height: 44px; border-radius: 50%; background: #f5a623; color: #fff;
+        font-weight: 800; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; flex:0 0 auto;}
+.stext { font-size: 20px; color: #22384a; }
+.two { display: flex; gap: 40px; align-items: flex-start; }
+.two .left { flex: 1.2; } .two .right { flex: 1; }
+.bullets { list-style: none; }
+.bullets li { font-size: 21px; color: #273d4f; line-height: 1.5; margin-bottom: 16px; padding-left: 26px; position: relative; }
+.bullets li:before { content: "•"; color: #16548a; position: absolute; left: 4px; font-weight: 800; }
+
+/* 아키텍처 */
+.arch-top { background: #0e3f63; color: #eaf3fa; border-radius: 14px; padding: 26px 30px; }
+.arch-top .t { font-size: 26px; font-weight: 800; }
+.arch-top .d { font-size: 19px; color: #c6d9e8; margin-top: 8px; }
+.arch-arrow { text-align: center; font-size: 30px; color: #f5a623; margin: 14px 0; font-weight: 800; }
+.arch-foot { font-size: 18px; color: #5f6f7c; margin-top: 26px; }
+
+/* 타임라인 */
+.tl { display: flex; gap: 0; margin-top: 30px; }
+.tlcol { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.tlhead { font-size: 22px; font-weight: 800; color: #16548a; margin-bottom: 18px; height: 28px; }
+.tldot { width: 22px; height: 22px; border-radius: 50%; background: #0e4f7c; position: relative; }
+.tldot.last { background: #f5a623; }
+.tlline { position: absolute; top: 50%; left: 50%; width: 100%; height: 3px; background: #c9d6e0; transform: translateY(-50%); z-index: -1; }
+.tlbar { position: relative; height: 3px; background: #c9d6e0; width: 100%; margin: 10px 0 18px; }
+.tlbody { background: #eef2f6; border-radius: 12px; padding: 18px 16px; font-size: 16.5px; color: #4a5c6a;
+          line-height: 1.45; width: 92%; min-height: 150px; }
+.pageno { position: absolute; right: 36px; bottom: 26px; font-size: 15px; color: #9aa9b5; }
+.dark .pageno { color: #5c7083; }
+</style></head><body><section class="slide dark">
+  <div class="logo-wrap logo-dark"><div class="logo-plate"><img src="file:///D:/Source/IDOIT/iDrop/iDrop.png" alt="iDrop"><span class="wm">iDrop</span></div></div>
+  <div class="h1">한글 서버를 위한 파일 전송</div>
+  <div class="sub">SFTP · FTP를 한 창에서, EUC-KR 서버의 한글 파일명까지 깨끗하게</div>
+  <div class="foot title-foot">소개서 | 버전 0.1.0 | (주)이도아이티</div>
+</section>
+<section class="slide">
+  <div class="h2">iDrop를 한눈에 보기</div>
+  <div class="stats"><div class="stat"><div class="big">2종</div><div class="lbl">전송 프로토콜</div><div class="dsc">SFTP · FTP를 사이트마다 선택</div></div><div class="stat"><div class="big">자동</div><div class="lbl">한글 파일명</div><div class="dsc">UTF-8 / EUC-KR 바이트 단위 처리</div></div><div class="stat"><div class="big">이어받기</div><div class="lbl">끊겨도 복구</div><div class="dsc">재시도 시 중단 지점부터 이어서</div></div><div class="stat"><div class="big">한·영</div><div class="lbl">화면 언어</div><div class="dsc">버튼으로 바로 전환</div></div></div>
+  <div class="note">russh 네이티브 SSH와 Tauri로 만든 Windows용 파일 전송기입니다. 듀얼 패널, 사이트 관리, 전송 큐, 원격 바로 편집을 한 앱에서 씁니다.</div>
+  <div class="pageno">2</div>
+</section>
+<section class="slide">
+  <div class="h2">EUC-KR 서버의 한글 파일명이 깨지지 않게</div>
+  <div class="cols">
+    <div class="col light"><div class="ct"><span class="badge warn">!</span>기존 FTP 클라이언트의 문제</div><div class="cb">많은 FTP 클라이언트가 파일 이름을 UTF-8로만 다뤄, EUC-KR(CP949)로 저장된 한글 파일·폴더 이름이 ???나 깨진 글자로 보이고 다운로드·업로드가 실패합니다.</div></div>
+    <div class="col fill"><div class="ct"><span class="badge ok">&#10003;</span>iDrop의 해결</div><div class="cb">서버가 준 이름 바이트를 그대로 받아 자동 감지(UTF-8/EUC-KR)로 해석하고, 새 이름은 서버 인코딩으로 다시 만들어 보냅니다. 한 폴더에 두 인코딩이 섞여도 정상 표시됩니다.</div></div>
+  </div>
+  <div class="flow">서버 바이트  →  iDrop 자동 감지(EUC-KR / UTF-8)  →  화면 · 전송</div>
+  <div class="pageno">3</div>
+</section>
+<section class="slide">
+  <div class="h2">듀얼 패널과 전송 큐</div>
+  <div class="two">
+    <div class="left"><ul class="bullets"><li>왼쪽 로컬 · 오른쪽 원격, 끌어서 업로드/다운로드</li><li>전송 큐에서 진행률·속도 표시, 취소 · 재시도</li><li>끊긴 전송은 이어받기(resume)로 중단 지점부터</li><li>패널 키보드 탐색(화살표) · 우클릭 메뉴</li><li>디바이더로 패널·큐 크기 조정, 크기 기억</li></ul></div>
+    <div class="right"><div class="steps"><div class="step"><span class="snum">1</span><span class="stext">로컬·원격에서 파일 선택</span></div><div class="step"><span class="snum">2</span><span class="stext">끌어 놓으면 큐에 쌓임</span></div><div class="step"><span class="snum">3</span><span class="stext">자동 전송 · 진행률 확인</span></div></div></div>
+  </div>
+  <div class="pageno">4</div>
+</section>
+<section class="slide">
+  <div class="h2">접속 관리: 사이트를 한곳에서</div>
+  <div class="grid c3"><div class="fcard"><div class="fhead"><span class="icon">&#128193;</span><span class="ftitle">그룹 · 트리</span></div><div class="fdesc">사이트를 그룹으로 묶고 끌어서 정리</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128229;</span><span class="ftitle">한 번에 가져오기</span></div><div class="fdesc">iDOT · PuTTY · Xshell · CSV 세션 지원</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128274;</span><span class="ftitle">비밀번호 암호화</span></div><div class="fdesc">Windows DPAPI, 이 PC에서만 복호화</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128228;</span><span class="ftitle">자동 로그인</span></div><div class="fdesc">저장하면 바로 접속, 비우면 그때 입력</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128190;</span><span class="ftitle">마지막 위치 기억</span></div><div class="fdesc">사이트별 로컬·원격 폴더를 다음 접속에</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128269;</span><span class="ftitle">최초 기동 표시</span></div><div class="fdesc">앱을 켜면 사이트 관리자부터</div></div></div>
+  <div class="pageno">5</div>
+</section>
+<section class="slide">
+  <div class="h2">안정성과 원격 편집</div>
+  <div class="grid c3"><div class="fcard"><div class="fhead"><span class="icon">&#128260;</span><span class="ftitle">자동 재연결</span></div><div class="fdesc">연결이 끊기면 알아서 다시 연결</div></div><div class="fcard"><div class="fhead"><span class="icon">&#9851;</span><span class="ftitle">자동 재시도</span></div><div class="fdesc">실패한 전송을 자동으로 다시 시도</div></div><div class="fcard"><div class="fhead"><span class="icon">&#9199;</span><span class="ftitle">이어받기</span></div><div class="fdesc">중단된 지점부터 이어서 전송</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128196;</span><span class="ftitle">원격 바로 편집</span></div><div class="fdesc">원격 파일을 내려받아 바로 View/Edit</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128221;</span><span class="ftitle">저장 시 업로드</span></div><div class="fdesc">편집 후 저장하면 원격에 바로 반영</div></div><div class="fcard"><div class="fhead"><span class="icon">&#128227;</span><span class="ftitle">상태바 안내</span></div><div class="fdesc">연결·오류 메시지를 하단 상태바에</div></div></div>
+  <div class="pageno">6</div>
+</section>
+<section class="slide">
+  <div class="h2">구조: 가벼운 UI, 단단한 Rust</div>
+  <div class="arch-top"><div class="t">프론트엔드  TypeScript (바닐라)</div><div class="d">듀얼 패널 · 전송 큐 · 사이트 관리자 · 원격 편집 창 · 한/영 문구</div></div>
+  <div class="arch-arrow">&#9660;</div>
+  <div class="grid c3"><div class="fcard"><div class="ftitle">SSH / SFTP</div><div class="fdesc">russh 네이티브 + 자체 SFTP v3 클라이언트</div></div><div class="fcard"><div class="ftitle">FTP</div><div class="fdesc">tokio 네이티브 FTP (PASV, EUC-KR 이름)</div></div><div class="fcard"><div class="ftitle">Windows 연동</div><div class="fdesc">DPAPI · 호스트 키 · 세션 가져오기</div></div></div>
+  <div class="arch-foot">백엔드 Rust · Tauri 2 · 단일 실행파일(iDrop.exe)과 MSI 설치 관리자로 배포</div>
+  <div class="pageno">7</div>
+</section>
+<section class="slide">
+  <div class="h2">개발 이력</div>
+  <div class="tl"><div class="tlcol">
+          <div class="tlhead">M0·M1</div>
+          <div class="tlbar"><div class="tldot" style="margin:0 auto;"></div></div>
+          <div class="tlbody">스캐폴드 + 연결 코어(네이티브 SSH)</div>
+        </div><div class="tlcol">
+          <div class="tlhead">M2·M3</div>
+          <div class="tlbar"><div class="tldot" style="margin:0 auto;"></div></div>
+          <div class="tlbody">듀얼 패널 + 전송 큐 엔진 · 드래그&amp;드롭</div>
+        </div><div class="tlcol">
+          <div class="tlhead">M4·M5</div>
+          <div class="tlbar"><div class="tldot" style="margin:0 auto;"></div></div>
+          <div class="tlbody">사이트 관리자 · 가져오기 · 충돌 처리 MVP</div>
+        </div><div class="tlcol">
+          <div class="tlhead">확장</div>
+          <div class="tlbar"><div class="tldot" style="margin:0 auto;"></div></div>
+          <div class="tlbody">FTP 지원 · 이어받기 · 자동 재연결/재시도</div>
+        </div><div class="tlcol">
+          <div class="tlhead">최신</div>
+          <div class="tlbar"><div class="tldot last" style="margin:0 auto;"></div></div>
+          <div class="tlbody">원격 파일 바로 편집(View/Edit)</div>
+        </div></div>
+  <div class="pageno">8</div>
+</section>
+<section class="slide dark">
+  <div style="margin-top:150px;"></div>
+  <div class="h1">iDOT와 함께 쓰는 파일 전송기</div>
+  <div class="sub">한글 서버 접속부터 파일 전송, 원격 편집까지 한 앱으로.</div>
+  <div style="margin-top:80px; font-size:22px; font-weight:700; color:#eaf1f7;">버그 문의  nezzard@idoits.co.kr</div>
+  <div class="foot" style="margin-top:14px;">© 2026 (주)이도아이티. All rights reserved.</div>
+</section></body></html>
