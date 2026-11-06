@@ -202,7 +202,7 @@ export function conflictDialog(name: string): Promise<{ action: string; applyAll
     body.append(msg, applyLabel);
     b.appendChild(body);
     const row = document.createElement("div");
-    row.className = "modal-btns";
+    row.className = "modal-btns conflict-btns";
     const over = btn(t("conflict.overwrite"), "primary");
     const rename = btn(t("conflict.rename"));
     const skip = btn(t("conflict.skip"));

@@ -520,10 +520,20 @@ impl Queue {
             dir: Dir,
             name: String,
         }
+        // 같은 파일명이 여러 폴더에 있을 수 있으니 "상위폴더/파일명"으로 구분해서 보여준다
         let name = if dir == Dir::Upload {
-            sftp::base(remote).to_string()
+            let base = sftp::base(remote);
+            let parent = sftp::base_dir(remote);
+            match parent.rsplit('/').find(|s| !s.is_empty()) {
+                Some(p) => format!("{p}/{base}"),
+                None => base.to_string(),
+            }
         } else {
-            local.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+            let base = local.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+            match local.parent().and_then(|p| p.file_name()) {
+                Some(p) => format!("{}/{}", p.to_string_lossy(), base),
+                None => base,
+            }
         };
         let _ = self.app.emit("queue-conflict", C { id, dir, name });
         rx.await.unwrap_or(Conflict::Skip)
