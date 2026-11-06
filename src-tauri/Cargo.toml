@@ -1,6 +1,6 @@
 [package]
 name = "idrop"
-version = "0.1.0"
+version = "1.0.0"
 description = "iDrop — SFTP file transfer for Korean legacy servers"
 authors = ["IDOIT Inc."]
 edition = "2021"
