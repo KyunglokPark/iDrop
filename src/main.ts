@@ -2,7 +2,7 @@
 import "./styles.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { applyI18n, getLang, t } from "./i18n";
+import { applyI18n, getLang, helpHtml, t } from "./i18n";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { confirmBox, initDialogs, promptText } from "./dialogs";
 import {
@@ -400,6 +400,26 @@ for (const el of [qcHost, qcPort, qcUser, qcPass]) {
     if (e.key === "Enter") void quickConnect();
   });
 }
+
+// ---- 도움말 -------------------------------------------------------------------
+const helpModal = document.getElementById("help-modal") as HTMLElement;
+const helpBody = document.getElementById("help-body") as HTMLElement;
+function openHelp() {
+  helpBody.innerHTML = helpHtml();
+  helpBody.scrollTop = 0;
+  helpModal.classList.remove("hidden");
+}
+function closeHelp() {
+  helpModal.classList.add("hidden");
+}
+document.getElementById("help-open")!.addEventListener("click", openHelp);
+document.getElementById("help-close")!.addEventListener("click", closeHelp);
+helpModal.addEventListener("click", (e) => {
+  if (e.target === helpModal) closeHelp();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !helpModal.classList.contains("hidden")) closeHelp();
+});
 
 // ---- 접속 상태 ----------------------------------------------------------------
 

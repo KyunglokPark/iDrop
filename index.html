@@ -20,6 +20,8 @@
         <input id="qc-user" type="text" data-i18n-placeholder="top.user" spellcheck="false" />
         <input id="qc-pass" type="password" data-i18n-placeholder="top.pass" />
         <button id="qc-connect" type="button" data-i18n="top.connect">빠른 연결</button>
+        <span class="top-spacer"></span>
+        <button id="help-open" type="button" class="help-btn" data-i18n-title="top.help" title="도움말">?</button>
       </header>
 
       <!-- 듀얼 패널 -->
@@ -116,6 +118,17 @@
         </div>
       </div>
       <input id="sf-import-file" type="file" multiple accept=".csv,.xsh,.xts" class="hidden" />
+    </div>
+
+    <!-- 도움말 -->
+    <div id="help-modal" class="hidden">
+      <div class="help-box">
+        <div class="help-head">
+          <span class="help-title"><img class="help-logo" src="/iDrop_CI.png" alt="iDrop" /><span data-i18n="help.title">아이드롭 도움말</span></span>
+          <button id="help-close" type="button" class="x" data-i18n-title="close.esc" title="닫기 (Esc)">✕</button>
+        </div>
+        <div id="help-body" class="help-body"></div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>
